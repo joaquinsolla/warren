@@ -1,4 +1,4 @@
-# Modelo de Datos - Wealth Tracker
+# Modelo de Datos - Warren
 
 ## Filosofía del modelo
 
