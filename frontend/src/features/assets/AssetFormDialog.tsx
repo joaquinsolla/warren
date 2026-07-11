@@ -1,0 +1,298 @@
+import * as React from 'react'
+import { CheckCircle2Icon, CircleAlertIcon } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { BrandIcon, normalizeDomain } from '@/components/BrandIcon'
+import { ColorPicker } from '@/components/ColorPicker'
+import { CURRENCIES } from '@/lib/currencies'
+import { brandStyle } from '@/lib/brand'
+import { useProfile } from '@/features/profile/hooks'
+import { useCreateAsset, useUpdateAsset } from '@/features/assets/hooks'
+import { ASSET_TYPE_LABELS, ASSET_TYPE_ORDER } from '@/features/assets/labels'
+import type { Asset, AssetType } from '@/features/assets/api'
+
+type AssetFormDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  asset?: Asset | null
+}
+
+export function AssetFormDialog({
+  open,
+  onOpenChange,
+  asset,
+}: AssetFormDialogProps) {
+  const isEdit = Boolean(asset)
+  const { data: profile } = useProfile()
+  const createMutation = useCreateAsset()
+  const updateMutation = useUpdateAsset()
+
+  const [symbol, setSymbol] = React.useState('')
+  const [name, setName] = React.useState('')
+  const [assetType, setAssetType] = React.useState<AssetType>('STOCK')
+  const [currency, setCurrency] = React.useState('EUR')
+  const [isin, setIsin] = React.useState('')
+  const [exchange, setExchange] = React.useState('')
+  const [iconDomain, setIconDomain] = React.useState('')
+  const [color, setColor] = React.useState<string | null>(null)
+  const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+
+  const cleanDomain = normalizeDomain(iconDomain)
+  const domainLooksValid =
+    cleanDomain !== null && /\.[a-z]{2,}$/.test(cleanDomain)
+
+  React.useEffect(() => {
+    if (!open) return
+    setSymbol(asset?.symbol ?? '')
+    setName(asset?.name ?? '')
+    setAssetType(asset?.asset_type ?? 'STOCK')
+    setCurrency(asset?.currency ?? profile?.base_currency ?? 'EUR')
+    setIsin(asset?.isin ?? '')
+    setExchange(asset?.exchange ?? '')
+    setIconDomain(asset?.icon_domain ?? '')
+    setColor(asset?.color ?? null)
+    setErrorMsg(null)
+  }, [open, asset, profile?.base_currency])
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+  const trimmedSymbol = symbol.trim().toUpperCase()
+  const trimmedName = name.trim()
+
+  async function handleSubmit(event: React.FormEvent) {
+    event.preventDefault()
+    setErrorMsg(null)
+    if (!trimmedSymbol) {
+      setErrorMsg('El símbolo es obligatorio.')
+      return
+    }
+    if (!trimmedName) {
+      setErrorMsg('El nombre es obligatorio.')
+      return
+    }
+    const values = {
+      symbol: trimmedSymbol,
+      name: trimmedName,
+      asset_type: assetType,
+      currency,
+      isin: isin.trim().toUpperCase() || null,
+      exchange: exchange.trim() || null,
+      icon_domain: cleanDomain,
+      color,
+    }
+    try {
+      if (isEdit && asset) {
+        await updateMutation.mutateAsync({ id: asset.id, values })
+      } else {
+        await createMutation.mutateAsync(values)
+      }
+      onOpenChange(false)
+    } catch (err) {
+      setErrorMsg((err as Error).message)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <DialogHeader>
+            <DialogTitle>{isEdit ? 'Editar activo' : 'Nuevo activo'}</DialogTitle>
+            <DialogDescription>
+              Un valor de tu catálogo: acción, ETF, cripto… Lo usarás al
+              registrar inversiones.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex items-center gap-3">
+            <span style={brandStyle(color)}>
+              <BrandIcon
+                name={trimmedName || trimmedSymbol || '?'}
+                domain={cleanDomain}
+                className={color ? 'bg-brand text-brand-foreground' : undefined}
+              />
+            </span>
+            <div className="grid flex-1 grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="asset-symbol">Símbolo</Label>
+                <Input
+                  id="asset-symbol"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  placeholder="AAPL, BTC, VWCE…"
+                  autoFocus
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={24}
+                  className="uppercase"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={assetType}
+                  onValueChange={(v) => setAssetType(v as AssetType)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSET_TYPE_ORDER.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {ASSET_TYPE_LABELS[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="asset-name">Nombre</Label>
+            <Input
+              id="asset-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Apple Inc., Bitcoin…"
+              maxLength={120}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Moneda</Label>
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c.code} value={c.code}>
+                      {c.code} · {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="asset-exchange">
+                Mercado{' '}
+                <span className="text-muted-foreground font-normal">
+                  (opcional)
+                </span>
+              </Label>
+              <Input
+                id="asset-exchange"
+                value={exchange}
+                onChange={(e) => setExchange(e.target.value)}
+                placeholder="NASDAQ, XETRA…"
+                maxLength={40}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="asset-isin">
+              ISIN{' '}
+              <span className="text-muted-foreground font-normal">
+                (opcional)
+              </span>
+            </Label>
+            <Input
+              id="asset-isin"
+              value={isin}
+              onChange={(e) => setIsin(e.target.value)}
+              placeholder="US0378331005"
+              autoCapitalize="characters"
+              spellCheck={false}
+              maxLength={12}
+              className="uppercase"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="asset-icon">
+              Dominio de la web{' '}
+              <span className="text-muted-foreground font-normal">
+                (opcional)
+              </span>
+            </Label>
+            <Input
+              id="asset-icon"
+              value={iconDomain}
+              onChange={(e) => setIconDomain(e.target.value)}
+              placeholder="apple.com, nvidia.com, bitcoin.org…"
+              inputMode="url"
+              autoCapitalize="none"
+              spellCheck={false}
+            />
+            {iconDomain.trim() && domainLooksValid && (
+              <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                <CheckCircle2Icon className="text-positive size-3.5" />
+                Vista previa del icono a la izquierda. Si no aparece, se usará la
+                inicial.
+              </p>
+            )}
+            {iconDomain.trim() && !domainLooksValid && (
+              <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                <CircleAlertIcon className="size-3.5" />
+                Escribe un dominio válido, p. ej. <code>apple.com</code>.
+              </p>
+            )}
+            {!iconDomain.trim() && (
+              <p className="text-muted-foreground text-xs">
+                Se toma el icono del sitio web (vía DuckDuckGo). Si se deja vacío
+                se usa la inicial del símbolo.
+              </p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label>
+              Color{' '}
+              <span className="text-muted-foreground font-normal">
+                (opcional)
+              </span>
+            </Label>
+            <ColorPicker value={color} onChange={setColor} />
+          </div>
+
+          {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => onOpenChange(false)}
+              disabled={isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={isPending || !trimmedSymbol || !trimmedName}
+            >
+              {isEdit ? 'Guardar cambios' : 'Crear activo'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

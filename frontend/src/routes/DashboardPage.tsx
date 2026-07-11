@@ -6,6 +6,9 @@ import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { PortfolioSwitcher } from '@/features/portfolios/PortfolioSwitcher'
 import { PortfolioFormDialog } from '@/features/portfolios/PortfolioFormDialog'
+import { EntitiesSection } from '@/features/entities/EntitiesSection'
+import { CashSection } from '@/features/cash/CashSection'
+import { AssetsSection } from '@/features/assets/AssetsSection'
 
 export function DashboardPage() {
   const { currentPortfolio, isLoading, error, setCurrentPortfolioId } =
@@ -50,19 +53,21 @@ export function DashboardPage() {
         )}
 
         {!isLoading && !error && currentPortfolio && (
-          <section className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {currentPortfolio.name}
-            </h1>
-            {currentPortfolio.description && (
-              <p className="text-muted-foreground">
-                {currentPortfolio.description}
-              </p>
-            )}
-            <div className="text-muted-foreground mt-8 rounded-xl border border-dashed p-10 text-center text-sm">
-              Aquí verás el resumen de esta cartera cuando añadamos entidades y
-              movimientos.
+          <section className="space-y-8">
+            <div className="space-y-2">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {currentPortfolio.name}
+              </h1>
+              {currentPortfolio.description && (
+                <p className="text-muted-foreground">
+                  {currentPortfolio.description}
+                </p>
+              )}
             </div>
+
+            <EntitiesSection portfolioId={currentPortfolio.id} />
+            <CashSection portfolioId={currentPortfolio.id} />
+            <AssetsSection />
           </section>
         )}
       </main>

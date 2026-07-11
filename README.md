@@ -130,7 +130,7 @@ Puede ser:
 | name | text | Nombre de la entidad |
 | type | enum | BANK / BROKER |
 | currency | text | Moneda principal del efectivo |
-| icon_slug | text | Slug de Simple Icons (opcional). NULL → inicial del nombre |
+| icon_domain | text | Dominio de la web para el icono (DuckDuckGo), opcional. NULL → inicial del nombre |
 | color | text | Color hex de accent (opcional). NULL → tema monocromo |
 | cash_balance_cache | numeric | Caché del efectivo |
 | created_at | timestamptz | |
@@ -150,24 +150,31 @@ Siempre podrá recalcularse.
 
 # Tabla: assets
 
-Catálogo global de activos financieros.
+Catálogo de activos financieros **propio de cada usuario**.
 
-No depende del usuario.
+Cada usuario mantiene su propio catálogo: el `AAPL` de un usuario es un
+registro distinto del `AAPL` de otro. Se comparte entre todos los portfolios
+del mismo usuario (scope = `user_id`, igual que `portfolios`).
 
 ## Campos
 
 | Campo | Tipo |
 |--------|------|
 | id | uuid |
+| user_id | uuid |
 | symbol | text |
 | isin | text |
 | name | text |
 | asset_type | enum |
 | currency | text |
 | exchange | text |
-| icon_slug | text |
+| icon_domain | text |
 | color | text |
 | created_at | timestamptz |
+
+RLS: cada usuario solo puede leer, crear, editar y borrar sus propios activos
+(`user_id = auth.uid()`). Un activo no puede borrarse si tiene holdings o
+transacciones de inversión asociadas (FK `on delete restrict`).
 
 ## asset_type
 
@@ -336,6 +343,33 @@ Adjustment: +8€
 Nunca modifica directamente el balance.
 
 Siempre genera una transacción para mantener el historial.
+
+---
+
+## Saldo de efectivo (derivado)
+
+`entities.cash_balance_cache` es una **caché**, nunca la fuente de verdad. Se
+mantiene automáticamente con un trigger sobre `cash_transactions`:
+
+- `+amount` a `to_entity_id` (si existe)
+- `-amount` a `from_entity_id` (si existe)
+
+Esto cubre los 4 tipos de forma uniforme (TRANSFER resta al origen y suma al
+destino; DEPOSIT suma; WITHDRAWAL resta; ADJUSTMENT suma si usa `to_entity_id`
+o resta si usa `from_entity_id`). `amount` es siempre positivo.
+
+Reconciliación: `recompute_cash_balances(portfolio_id)` reconstruye la caché de
+todas las entidades del portfolio desde el histórico.
+
+Restricciones (CHECK):
+
+- `amount > 0`
+- TRANSFER: origen y destino no nulos y distintos
+- DEPOSIT: solo destino · WITHDRAWAL: solo origen · ADJUSTMENT: exactamente uno
+
+Limitación actual: la moneda del movimiento debe coincidir con la de las
+entidades implicadas (las transferencias entre monedas distintas se hacen como
+retirada + ingreso). Se valida en la aplicación.
 
 ---
 

@@ -21,11 +21,12 @@ export type Database = {
           created_at: string
           currency: string
           exchange: string | null
-          icon_slug: string | null
+          icon_domain: string | null
           id: string
           isin: string | null
           name: string
           symbol: string
+          user_id: string
         }
         Insert: {
           asset_type: Database['public']['Enums']['asset_type']
@@ -33,11 +34,12 @@ export type Database = {
           created_at?: string
           currency: string
           exchange?: string | null
-          icon_slug?: string | null
+          icon_domain?: string | null
           id?: string
           isin?: string | null
           name: string
           symbol: string
+          user_id: string
         }
         Update: {
           asset_type?: Database['public']['Enums']['asset_type']
@@ -45,11 +47,12 @@ export type Database = {
           created_at?: string
           currency?: string
           exchange?: string | null
-          icon_slug?: string | null
+          icon_domain?: string | null
           id?: string
           isin?: string | null
           name?: string
           symbol?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -126,7 +129,7 @@ export type Database = {
           color: string | null
           created_at: string
           currency: string
-          icon_slug: string | null
+          icon_domain: string | null
           id: string
           name: string
           portfolio_id: string
@@ -138,7 +141,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency: string
-          icon_slug?: string | null
+          icon_domain?: string | null
           id?: string
           name: string
           portfolio_id: string
@@ -150,7 +153,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency?: string
-          icon_slug?: string | null
+          icon_domain?: string | null
           id?: string
           name?: string
           portfolio_id?: string
