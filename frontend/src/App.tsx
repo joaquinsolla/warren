@@ -1,9 +1,35 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from '@/features/auth/AuthProvider'
+import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { LoginPage } from '@/routes/LoginPage'
+import { SignupPage } from '@/routes/SignupPage'
+import { ForgotPasswordPage } from '@/routes/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/routes/ResetPasswordPage'
+import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
+import { DashboardPage } from '@/routes/DashboardPage'
+
 function App() {
   return (
-    <main>
-      <h1>Warren</h1>
-      <p>Libro de contabilidad — configuración base lista.</p>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 

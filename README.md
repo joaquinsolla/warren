@@ -129,6 +129,7 @@ Puede ser:
 | name | text | Nombre de la entidad |
 | type | enum | BANK / BROKER |
 | currency | text | Moneda principal del efectivo |
+| icon_slug | text | Slug de Simple Icons (opcional). NULL → inicial del nombre |
 | cash_balance_cache | numeric | Caché del efectivo |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
@@ -162,6 +163,7 @@ No depende del usuario.
 | asset_type | enum |
 | currency | text |
 | exchange | text |
+| icon_slug | text |
 | created_at | timestamptz |
 
 ## asset_type
