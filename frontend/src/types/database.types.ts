@@ -17,6 +17,7 @@ export type Database = {
       assets: {
         Row: {
           asset_type: Database['public']['Enums']['asset_type']
+          color: string | null
           created_at: string
           currency: string
           exchange: string | null
@@ -28,6 +29,7 @@ export type Database = {
         }
         Insert: {
           asset_type: Database['public']['Enums']['asset_type']
+          color?: string | null
           created_at?: string
           currency: string
           exchange?: string | null
@@ -39,6 +41,7 @@ export type Database = {
         }
         Update: {
           asset_type?: Database['public']['Enums']['asset_type']
+          color?: string | null
           created_at?: string
           currency?: string
           exchange?: string | null
@@ -120,6 +123,7 @@ export type Database = {
       entities: {
         Row: {
           cash_balance_cache: number
+          color: string | null
           created_at: string
           currency: string
           icon_slug: string | null
@@ -131,6 +135,7 @@ export type Database = {
         }
         Insert: {
           cash_balance_cache?: number
+          color?: string | null
           created_at?: string
           currency: string
           icon_slug?: string | null
@@ -142,6 +147,7 @@ export type Database = {
         }
         Update: {
           cash_balance_cache?: number
+          color?: string | null
           created_at?: string
           currency?: string
           icon_slug?: string | null
@@ -235,6 +241,77 @@ export type Database = {
             columns: ['entity_id']
             isOneToOne: false
             referencedRelation: 'entities'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      investment_objectives: {
+        Row: {
+          asset_id: string
+          created_at: string
+          entity_id: string | null
+          id: string
+          is_active: boolean
+          portfolio_id: string
+          target_body: string | null
+          target_date: string | null
+          target_price: number | null
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          asset_id: string
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          portfolio_id: string
+          target_body?: string | null
+          target_date?: string | null
+          target_price?: number | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asset_id?: string
+          created_at?: string
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean
+          portfolio_id?: string
+          target_body?: string | null
+          target_date?: string | null
+          target_price?: number | null
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'investment_objectives_asset_id_fkey'
+            columns: ['asset_id']
+            isOneToOne: false
+            referencedRelation: 'assets'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'investment_objectives_entity_id_fkey'
+            columns: ['entity_id']
+            isOneToOne: false
+            referencedRelation: 'entities'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'investment_objectives_portfolio_id_fkey'
+            columns: ['portfolio_id']
+            isOneToOne: false
+            referencedRelation: 'portfolios'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'investment_objectives_transaction_id_fkey'
+            columns: ['transaction_id']
+            isOneToOne: false
+            referencedRelation: 'investment_transactions'
             referencedColumns: ['id']
           },
         ]
@@ -345,6 +422,7 @@ export type Database = {
           created_at: string
           display_name: string | null
           id: string
+          tax_regime: string
           updated_at: string
         }
         Insert: {
@@ -353,6 +431,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id: string
+          tax_regime?: string
           updated_at?: string
         }
         Update: {
@@ -361,6 +440,7 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           id?: string
+          tax_regime?: string
           updated_at?: string
         }
         Relationships: []

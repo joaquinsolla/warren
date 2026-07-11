@@ -70,6 +70,7 @@ Información adicional del usuario autenticado mediante Supabase Auth.
 | display_name | text | Nombre del usuario |
 | avatar_url | text | Avatar opcional |
 | base_currency | text | Moneda preferida para visualizar el patrimonio |
+| tax_regime | text | País/régimen fiscal para estimar plusvalías (default 'ES') |
 | created_at | timestamptz | Fecha de creación |
 | updated_at | timestamptz | Fecha de actualización |
 
@@ -130,6 +131,7 @@ Puede ser:
 | type | enum | BANK / BROKER |
 | currency | text | Moneda principal del efectivo |
 | icon_slug | text | Slug de Simple Icons (opcional). NULL → inicial del nombre |
+| color | text | Color hex de accent (opcional). NULL → tema monocromo |
 | cash_balance_cache | numeric | Caché del efectivo |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
@@ -164,6 +166,7 @@ No depende del usuario.
 | currency | text |
 | exchange | text |
 | icon_slug | text |
+| color | text |
 | created_at | timestamptz |
 
 ## asset_type
@@ -443,6 +446,62 @@ remaining_quantity = 7
 Esto permite aplicar FIFO de forma muy eficiente.
 
 En operaciones SELL será NULL.
+
+---
+
+# Tabla: investment_objectives
+
+Objetivos o tesis de inversión asociados a un activo.
+
+Un activo puede tener varios objetivos.
+
+Sirve para anotar el motivo/estrategia de una posición ("holdear Nvidia hasta 250 € o fin de trimestre").
+
+## Campos
+
+| Campo | Tipo |
+|--------|------|
+| id | uuid |
+| portfolio_id | uuid |
+| asset_id | uuid |
+| entity_id | uuid nullable |
+| transaction_id | uuid nullable |
+| target_body | text nullable |
+| target_price | numeric nullable |
+| target_date | date nullable |
+| is_active | boolean |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+## Reglas
+
+Debe existir al menos uno de los tres objetivos: `target_body`, `target_price` o `target_date`.
+
+`entity_id` opcional:
+
+- Con valor: objetivo para el activo en un broker concreto.
+- NULL: objetivo a nivel de toda la cartera.
+
+`transaction_id` opcional: enlaza el objetivo con la compra concreta que lo motivó.
+
+`is_active`: control manual para pausar/activar una tesis sin borrarla.
+
+## Estado "cumplido"
+
+NO se almacena.
+
+Es un dato derivado que se calcula en el frontend:
+
+- Precio actual ≥ `target_price`.
+- Fecha actual ≥ `target_date`.
+
+Es volátil (puede cumplirse y dejar de cumplirse si el precio cae), por eso nunca se persiste.
+
+## Auto-borrado
+
+Al vender toda la posición de un activo en una entidad (posición neta a 0), sus objetivos asociados a ese entity+asset se eliminan automáticamente.
+
+Los objetivos a nivel de cartera (`entity_id` NULL) no se ven afectados.
 
 ---
 

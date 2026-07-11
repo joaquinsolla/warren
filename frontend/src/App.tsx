@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { PortfolioProvider } from '@/features/portfolios/PortfolioProvider'
 import { LoginPage } from '@/routes/LoginPage'
 import { SignupPage } from '@/routes/SignupPage'
 import { ForgotPasswordPage } from '@/routes/ForgotPasswordPage'
@@ -22,7 +23,9 @@ function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <DashboardPage />
+                <PortfolioProvider>
+                  <DashboardPage />
+                </PortfolioProvider>
               </ProtectedRoute>
             }
           />

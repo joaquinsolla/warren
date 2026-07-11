@@ -1,54 +1,100 @@
-import { useQuery } from '@tanstack/react-query'
+import * as React from 'react'
+import { LogOutIcon, PlusIcon, WalletIcon } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
+import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { Button } from '@/components/ui/button'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { PortfolioSwitcher } from '@/features/portfolios/PortfolioSwitcher'
+import { PortfolioFormDialog } from '@/features/portfolios/PortfolioFormDialog'
 
 export function DashboardPage() {
-  const { user } = useAuth()
-
-  // Query de prueba: cuenta los portfolios del usuario. Gracias a RLS solo
-  // devuelve los suyos, aunque no filtremos por user_id explícitamente.
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['portfolios-count'],
-    queryFn: async () => {
-      const { count, error } = await supabase
-        .from('portfolios')
-        .select('*', { count: 'exact', head: true })
-      if (error) throw error
-      return count ?? 0
-    },
-  })
+  const { currentPortfolio, isLoading, error, setCurrentPortfolioId } =
+    useCurrentPortfolio()
+  const [createOpen, setCreateOpen] = React.useState(false)
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6 p-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Warren</h1>
-        <Button variant="outline" onClick={() => supabase.auth.signOut()}>
-          Cerrar sesión
-        </Button>
-      </div>
+    <div className="min-h-svh">
+      <header className="border-b">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-6 py-4">
+          <div className="flex items-center gap-3">
+            <span className="text-lg font-semibold tracking-tight">Warren</span>
+            {currentPortfolio && <PortfolioSwitcher />}
+          </div>
+          <div className="flex items-center gap-1">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Cerrar sesión"
+              onClick={() => supabase.auth.signOut()}
+            >
+              <LogOutIcon className="size-4" />
+            </Button>
+          </div>
+        </div>
+      </header>
 
-      <p className="text-sm text-muted-foreground">
-        Conectado como <span className="font-medium">{user?.email}</span>
-      </p>
-
-      <div className="rounded-lg border p-4">
-        <h2 className="mb-2 font-medium">Prueba de conexión con Supabase</h2>
+      <main className="mx-auto max-w-5xl px-6 py-8">
         {isLoading && (
-          <p className="text-sm text-muted-foreground">Cargando…</p>
+          <p className="text-muted-foreground text-sm">Cargando carteras…</p>
         )}
+
         {error && (
-          <p className="text-sm text-destructive">
-            Error: {(error as Error).message}
+          <p className="text-destructive text-sm">
+            Error al cargar tus carteras: {error.message}
           </p>
         )}
-        {!isLoading && !error && (
-          <p className="text-sm">
-            Portfolios encontrados:{' '}
-            <span className="font-semibold">{data}</span>
-          </p>
+
+        {!isLoading && !error && !currentPortfolio && (
+          <EmptyState onCreate={() => setCreateOpen(true)} />
         )}
+
+        {!isLoading && !error && currentPortfolio && (
+          <section className="space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {currentPortfolio.name}
+            </h1>
+            {currentPortfolio.description && (
+              <p className="text-muted-foreground">
+                {currentPortfolio.description}
+              </p>
+            )}
+            <div className="text-muted-foreground mt-8 rounded-xl border border-dashed p-10 text-center text-sm">
+              Aquí verás el resumen de esta cartera cuando añadamos entidades y
+              movimientos.
+            </div>
+          </section>
+        )}
+      </main>
+
+      <PortfolioFormDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={(id) => setCurrentPortfolioId(id)}
+      />
+    </div>
+  )
+}
+
+function EmptyState({ onCreate }: { onCreate: () => void }) {
+  return (
+    <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
+      <div className="bg-muted flex size-14 items-center justify-center rounded-full">
+        <WalletIcon className="text-muted-foreground size-6" />
       </div>
+      <div className="space-y-1">
+        <h1 className="text-xl font-semibold tracking-tight">
+          Crea tu primera cartera
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          Una cartera agrupa tus bancos, brokers y todos sus movimientos.
+          Empieza creando una.
+        </p>
+      </div>
+      <Button onClick={onCreate}>
+        <PlusIcon className="size-4" />
+        Nueva cartera
+      </Button>
     </div>
   )
 }
