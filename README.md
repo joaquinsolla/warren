@@ -649,34 +649,6 @@ Los objetivos a nivel de cartera (`entity_id` NULL) no se ven afectados.
 
 ---
 
-# Tabla: exchange_rates
-
-Histórico de tipos de cambio.
-
-## Campos
-
-| Campo | Tipo |
-|--------|------|
-| id | uuid |
-| from_currency | text |
-| to_currency | text |
-| rate | numeric |
-| obtained_at | timestamptz |
-
-Ejemplo:
-
-```text
-USD
-
-↓
-
-EUR
-
-0.9187
-```
-
----
-
 # Relaciones
 
 ```text
