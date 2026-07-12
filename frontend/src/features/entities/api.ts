@@ -13,14 +13,29 @@ export type EntityFormValues = {
 }
 
 /** Lista las entidades de un portfolio (RLS valida propiedad). */
-export async function listEntities(portfolioId: string): Promise<Entity[]> {
-  const { data, error } = await supabase
+export async function listEntities(
+  portfolioId: string,
+  includeDeleted = false,
+): Promise<Entity[]> {
+  let query = supabase
     .from('entities')
     .select('*')
     .eq('portfolio_id', portfolioId)
-    .order('created_at', { ascending: true })
+  if (!includeDeleted) query = query.is('deleted_at', null)
+  const { data, error } = await query.order('created_at', { ascending: true })
   if (error) throw error
   return data ?? []
+}
+
+/** Obtiene una entidad por id (incluye eliminadas). RLS valida propiedad. */
+export async function getEntityById(id: string): Promise<Entity | null> {
+  const { data, error } = await supabase
+    .from('entities')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  return data
 }
 
 export async function createEntity(
@@ -51,7 +66,7 @@ export async function updateEntity(
     .from('entities')
     .update({
       name: values.name,
-      type: values.type,
+      // type es inmutable: no se envía en updates.
       currency: values.currency,
       icon_domain: values.icon_domain,
       color: values.color,
@@ -63,7 +78,11 @@ export async function updateEntity(
   return data
 }
 
+/** Borrado lógico: marca la entidad como eliminada conservando su histórico. */
 export async function deleteEntity(id: string): Promise<void> {
-  const { error } = await supabase.from('entities').delete().eq('id', id)
+  const { error } = await supabase
+    .from('entities')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }

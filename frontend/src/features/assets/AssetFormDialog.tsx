@@ -112,7 +112,9 @@ export function AssetFormDialog({
       <DialogContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <DialogHeader>
-            <DialogTitle>{isEdit ? 'Editar activo' : 'Nuevo activo'}</DialogTitle>
+            <DialogTitle>
+              {isEdit ? 'Editar activo' : 'Nuevo activo'}
+            </DialogTitle>
             <DialogDescription>
               Un valor de tu catálogo: acción, ETF, cripto… Lo usarás al
               registrar inversiones.
@@ -147,6 +149,7 @@ export function AssetFormDialog({
                 <Select
                   value={assetType}
                   onValueChange={(v) => setAssetType(v as AssetType)}
+                  disabled={isEdit}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -159,6 +162,11 @@ export function AssetFormDialog({
                     ))}
                   </SelectContent>
                 </Select>
+                {isEdit && (
+                  <p className="text-muted-foreground text-xs">
+                    El tipo no se puede cambiar.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -245,8 +253,8 @@ export function AssetFormDialog({
             {iconDomain.trim() && domainLooksValid && (
               <p className="text-muted-foreground flex items-center gap-1 text-xs">
                 <CheckCircle2Icon className="text-positive size-3.5" />
-                Vista previa del icono a la izquierda. Si no aparece, se usará la
-                inicial.
+                Vista previa del icono a la izquierda. Si no aparece, se usará
+                la inicial.
               </p>
             )}
             {iconDomain.trim() && !domainLooksValid && (
@@ -257,8 +265,8 @@ export function AssetFormDialog({
             )}
             {!iconDomain.trim() && (
               <p className="text-muted-foreground text-xs">
-                Se toma el icono del sitio web (vía DuckDuckGo). Si se deja vacío
-                se usa la inicial del símbolo.
+                Se toma el icono del sitio web (vía DuckDuckGo). Si se deja
+                vacío se usa la inicial del símbolo.
               </p>
             )}
           </div>

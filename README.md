@@ -133,6 +133,7 @@ Puede ser:
 | icon_domain | text | Dominio de la web para el icono (DuckDuckGo), opcional. NULL → inicial del nombre |
 | color | text | Color hex de accent (opcional). NULL → tema monocromo |
 | cash_balance_cache | numeric | Caché del efectivo |
+| deleted_at | timestamptz nullable | Borrado lógico. NULL → activa |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
 
@@ -145,6 +146,21 @@ Una entidad puede contener inversiones en cualquier otra moneda.
 `cash_balance_cache` nunca será la fuente de verdad.
 
 Siempre podrá recalcularse.
+
+El campo `type` (BANK/BROKER) es **inmutable**: una vez creada la entidad no puede
+cambiar de tipo (reforzado con un trigger que rechaza el cambio en UPDATE).
+
+## Borrado (lápida)
+
+Una entidad con movimientos no puede borrarse físicamente sin perder el
+histórico contable. Por eso el borrado es **lógico**: se marca `deleted_at`.
+
+- La entidad desaparece de selectores, listas y del patrimonio total (se filtra
+  `deleted_at is null`).
+- Sus movimientos siguen en el histórico; en la UI se muestran como
+  pertenecientes a una entidad «eliminada» (conservando su nombre original).
+- Los balances y la multidivisa no se descuadran, ya que la fila (y su moneda)
+  se conserva.
 
 ---
 
@@ -196,6 +212,20 @@ Ejemplos:
 - MSFT
 - SPY
 
+`asset_type` es **inmutable**: una vez creado el activo no puede cambiar de tipo
+(reforzado con un trigger que rechaza el cambio en UPDATE).
+
+## Borrado (lápida)
+
+Igual que las entidades, un activo con inversiones no puede borrarse físicamente
+(las FK de `holdings`/`investment_transactions` son `on delete restrict`). El
+borrado es **lógico**: se marca `deleted_at`.
+
+- El activo desaparece del catálogo (`/assets`) y de los selectores de compra
+  (se filtra `deleted_at is null`).
+- Sus movimientos y posiciones siguen en el histórico; en la UI se muestran como
+  pertenecientes a un símbolo «eliminado» (conservando su símbolo original).
+
 ---
 
 # Tabla: holdings
@@ -220,8 +250,6 @@ Es una tabla derivada del histórico de operaciones.
 | quantity | numeric | Cantidad actualmente poseída |
 | invested_amount | numeric | Capital aún invertido |
 | average_price | numeric | Precio medio actual |
-| market_value_cache | numeric | Caché del valor de mercado |
-| unrealized_profit_cache | numeric | Caché del beneficio no realizado |
 | created_at | timestamptz | |
 | updated_at | timestamptz | |
 
@@ -261,6 +289,7 @@ Todos los movimientos de dinero pasan por esta tabla.
 | to_entity_id | uuid nullable |
 | transaction_type | enum |
 | amount | numeric |
+| to_amount | numeric nullable |
 | currency | text |
 | exchange_rate_to_base | numeric |
 | notes | text |
@@ -367,9 +396,60 @@ Restricciones (CHECK):
 - TRANSFER: origen y destino no nulos y distintos
 - DEPOSIT: solo destino · WITHDRAWAL: solo origen · ADJUSTMENT: exactamente uno
 
-Limitación actual: la moneda del movimiento debe coincidir con la de las
-entidades implicadas (las transferencias entre monedas distintas se hacen como
-retirada + ingreso). Se valida en la aplicación.
+## Transferencias entre monedas (multidivisa)
+
+Cuando origen y destino tienen monedas distintas, el importe que sale del origen
+(`amount`, en la moneda del origen) no coincide con el que llega al destino
+(`to_amount`, en la moneda del destino).
+
+- `amount` → se resta del origen en su moneda.
+- `to_amount` → se suma al destino en la moneda del destino.
+- Solo aplica a TRANSFER entre monedas distintas. Si las monedas coinciden,
+  `to_amount` es `NULL` y el destino recibe `amount`.
+
+En la app, para registrar una transferencia entre divisas es **obligatorio**
+tener configurado el tipo de cambio de ambas monedas (`fx_rates`). El usuario
+introduce **solo un lado** (el importe que sale **o** el que llega) y el otro se
+calcula automáticamente con el tipo configurado; nunca se introducen los dos.
+
+El trigger y `recompute_cash_balances` usan `coalesce(to_amount, amount)` para el
+lado del destino.
+
+---
+
+# Tabla: fx_rates
+
+Tipos de cambio **manuales** por usuario, usados para convertir a la moneda base
+y para sugerir `to_amount` en transferencias entre monedas.
+
+## Campos
+
+| Campo | Tipo |
+|--------|------|
+| id | uuid |
+| user_id | uuid |
+| currency | text |
+| rate_to_base | numeric |
+| created_at | timestamptz |
+| updated_at | timestamptz |
+
+## Reglas
+
+- RLS de propietario (`user_id = auth.uid()`).
+- Único por `(user_id, currency)` (upsert con `onConflict`).
+- `rate_to_base` = valor de 1 unidad de `currency` en la moneda base del usuario
+  (`profiles.base_currency`). La moneda base tiene tipo implícito 1 y no se
+  almacena.
+- El editor de tipos permite añadir **cualquier** divisa del catálogo, no solo
+  las que usan las entidades (p. ej. una entidad en EUR que compra posiciones en
+  USD).
+
+## Patrimonio total (derivado)
+
+El total agregado se calcula en la app (nunca se persiste) sumando en moneda
+base: `Σ efectivo(entidad)` + `Σ invertido a coste(holding)`, convirtiendo cada
+importe con `fx_rates`. Si falta el tipo de una divisa en uso, esos importes se
+excluyen del total y la UI avisa para que el usuario lo añada.
 
 ---
 
@@ -480,6 +560,36 @@ remaining_quantity = 7
 Esto permite aplicar FIFO de forma muy eficiente.
 
 En operaciones SELL será NULL.
+
+---
+
+## Posiciones y efectivo (derivados)
+
+Al registrar una compra/venta, un trigger sobre `investment_transactions`:
+
+- **Ajusta el efectivo de la entidad**: una COMPRA resta `gross + fees + taxes`;
+  una VENTA suma `gross - fees - taxes`.
+- **Reconstruye la posición** (`holdings`) con `recompute_holding(entity, asset)`:
+  aplica FIFO (consume las compras más antiguas actualizando su
+  `remaining_quantity`) y recalcula `quantity`, `invested_amount` y
+  `average_price`. El coste **incluye comisiones e impuestos**
+  (`coste_unitario = (gross + fees + taxes) / quantity`). Si la posición queda a
+  0, la fila de `holdings` se elimina.
+
+Guardas (BEFORE INSERT):
+
+- No se puede COMPRAR por encima del efectivo disponible de la entidad.
+- No se puede VENDER más participaciones de las que se poseen.
+
+`recompute_cash_balances(portfolio_id)` reconcilia el efectivo incluyendo tanto
+los movimientos de efectivo como las inversiones.
+
+El valor de mercado y la plusvalía latente requieren precio de mercado en vivo
+(pendiente de fuente de precios). No se almacenan: al no ser reconstruibles desde
+el historial, no encajan como caché. Cuando exista fuente de cotizaciones se
+calcularán en vivo.
+
+Limitación actual: la operación se registra en la moneda de la entidad (bróker).
 
 ---
 
@@ -895,8 +1005,7 @@ Esto permite reconstruir correctamente balances históricos y calcular rentabili
 Los siguientes campos nunca son la fuente de verdad:
 
 - `entities.cash_balance_cache`
-- `holdings.market_value_cache`
-- `holdings.unrealized_profit_cache`
+- `holdings.quantity`, `holdings.invested_amount`, `holdings.average_price`
 
 Todos pueden regenerarse a partir del histórico de operaciones.
 

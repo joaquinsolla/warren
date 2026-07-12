@@ -3,6 +3,7 @@ import { entitiesKey } from '@/features/entities/hooks'
 import {
   createCashTransaction,
   deleteCashTransaction,
+  getCashTransactionById,
   listCashTransactions,
   updateCashTransaction,
   type CashTransactionFormValues,
@@ -19,6 +20,17 @@ export function useCashTransactions(portfolioId: string | null) {
   })
 }
 
+export const cashTransactionKey = (id: string) =>
+  ['cash-transaction', id] as const
+
+export function useCashTransaction(id: string | undefined) {
+  return useQuery({
+    queryKey: cashTransactionKey(id ?? ''),
+    queryFn: () => getCashTransactionById(id as string),
+    enabled: Boolean(id),
+  })
+}
+
 /** Invalida movimientos + entidades (el trigger cambia cash_balance_cache). */
 function useInvalidateCash(portfolioId: string) {
   const queryClient = useQueryClient()
@@ -27,6 +39,9 @@ function useInvalidateCash(portfolioId: string) {
       queryKey: cashTransactionsKey(portfolioId),
     })
     queryClient.invalidateQueries({ queryKey: entitiesKey(portfolioId) })
+    // Vistas de detalle (getById) que dependen de estos datos
+    queryClient.invalidateQueries({ queryKey: ['entity'] })
+    queryClient.invalidateQueries({ queryKey: ['cash-transaction'] })
   }
 }
 

@@ -134,6 +134,7 @@ export function EntityFormDialog({
               <Select
                 value={type}
                 onValueChange={(v) => setType(v as EntityType)}
+                disabled={isEdit}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -143,6 +144,11 @@ export function EntityFormDialog({
                   <SelectItem value="BROKER">Bróker</SelectItem>
                 </SelectContent>
               </Select>
+              {isEdit && (
+                <p className="text-muted-foreground text-xs">
+                  El tipo no se puede cambiar.
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">

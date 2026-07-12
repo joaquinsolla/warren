@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   MoreVerticalIcon,
   PencilIcon,
@@ -125,11 +126,18 @@ function EntityCard({
   onDelete: () => void
 }) {
   const currency = getCurrency(entity.currency)
+  const navigate = useNavigate()
 
   return (
     <div
       style={brandStyle(entity.color)}
-      className="bg-card flex items-center gap-3 rounded-xl border p-4"
+      role="button"
+      tabIndex={0}
+      onClick={() => navigate(`/entities/${entity.id}`)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') navigate(`/entities/${entity.id}`)
+      }}
+      className="bg-card hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded-xl border p-4"
     >
       <BrandIcon
         name={entity.name}
@@ -151,6 +159,7 @@ function EntityCard({
             variant="ghost"
             size="icon-sm"
             aria-label="Acciones de la entidad"
+            onClick={(e) => e.stopPropagation()}
           >
             <MoreVerticalIcon className="size-4" />
           </Button>

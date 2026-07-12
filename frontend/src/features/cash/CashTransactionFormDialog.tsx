@@ -19,25 +19,32 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatMoney } from '@/lib/currencies'
+import { buildRateMap, convertBetween } from '@/lib/fx'
 import { useEntities } from '@/features/entities/hooks'
 import {
   useCreateCashTransaction,
   useUpdateCashTransaction,
 } from '@/features/cash/hooks'
+import { useProfile } from '@/features/profile/hooks'
+import { useFxRates } from '@/features/fx/hooks'
+import { FxRatesDialog } from '@/features/fx/FxRatesDialog'
 import { CASH_TYPE_LABELS, CASH_TYPE_ORDER } from '@/features/cash/labels'
-import type {
-  CashTransaction,
-  CashTransactionType,
-} from '@/features/cash/api'
+import type { CashTransaction, CashTransactionType } from '@/features/cash/api'
 import type { Entity } from '@/features/entities/api'
 
 type AdjustDirection = 'ADD' | 'SUBTRACT'
+type TransferSide = 'OUT' | 'IN'
+
+function round2(n: number): number {
+  return Math.round(n * 100) / 100
+}
 
 type CashTransactionFormDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   portfolioId: string
   transaction?: CashTransaction | null
+  defaultEntityId?: string | null
 }
 
 function todayInputValue(): string {
@@ -53,9 +60,13 @@ export function CashTransactionFormDialog({
   onOpenChange,
   portfolioId,
   transaction,
+  defaultEntityId,
 }: CashTransactionFormDialogProps) {
   const isEdit = Boolean(transaction)
   const { data: entities = [] } = useEntities(portfolioId)
+  const { data: profile } = useProfile()
+  const { data: fxRates = [] } = useFxRates()
+  const base = profile?.base_currency ?? 'EUR'
   const createMutation = useCreateCashTransaction(portfolioId)
   const updateMutation = useUpdateCashTransaction(portfolioId)
 
@@ -65,22 +76,30 @@ export function CashTransactionFormDialog({
   const [adjustId, setAdjustId] = React.useState<string>('')
   const [adjustDir, setAdjustDir] = React.useState<AdjustDirection>('ADD')
   const [amount, setAmount] = React.useState('')
+  const [toAmount, setToAmount] = React.useState('')
+  const [transferSide, setTransferSide] = React.useState<TransferSide>('OUT')
   const [executedAt, setExecutedAt] = React.useState(todayInputValue())
   const [notes, setNotes] = React.useState('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+  const [rateDialogOpen, setRateDialogOpen] = React.useState(false)
 
   React.useEffect(() => {
     if (!open) return
     setErrorMsg(null)
     setAmount(transaction ? String(transaction.amount) : '')
+    setToAmount(
+      transaction?.to_amount != null ? String(transaction.to_amount) : '',
+    )
+    setTransferSide('OUT')
     setNotes(transaction?.notes ?? '')
     setExecutedAt(
       transaction ? transaction.executed_at.slice(0, 10) : todayInputValue(),
     )
     const t = transaction?.transaction_type ?? 'DEPOSIT'
     setType(t)
+    const defEnt = transaction ? '' : (defaultEntityId ?? '')
     setFromId(transaction?.from_entity_id ?? '')
-    setToId(transaction?.to_entity_id ?? '')
+    setToId(transaction?.to_entity_id ?? defEnt)
     if (t === 'ADJUSTMENT') {
       if (transaction?.to_entity_id) {
         setAdjustDir('ADD')
@@ -90,21 +109,50 @@ export function CashTransactionFormDialog({
         setAdjustId(transaction.from_entity_id)
       } else {
         setAdjustDir('ADD')
-        setAdjustId('')
+        setAdjustId(defEnt)
       }
     } else {
-      setAdjustId('')
+      setAdjustId(defEnt)
       setAdjustDir('ADD')
     }
-  }, [open, transaction])
+  }, [open, transaction, defaultEntityId])
 
   const entityMap = React.useMemo(
     () => new Map(entities.map((e) => [e.id, e])),
     [entities],
   )
+  const rateMap = React.useMemo(() => buildRateMap(fxRates), [fxRates])
+
+  const fromCurrency = entityMap.get(fromId)?.currency ?? null
+  const toCurrency = entityMap.get(toId)?.currency ?? null
+  const isCrossTransfer =
+    type === 'TRANSFER' &&
+    Boolean(fromCurrency && toCurrency) &&
+    fromCurrency !== toCurrency
+
+  const crossRateAvailable = isCrossTransfer
+    ? convertBetween(
+        1,
+        fromCurrency as string,
+        toCurrency as string,
+        base,
+        rateMap,
+      ) !== null
+    : true
+
+  const enteredNum = transferSide === 'OUT' ? Number(amount) : Number(toAmount)
+  const computedOther =
+    isCrossTransfer && crossRateAvailable && enteredNum > 0
+      ? convertBetween(
+          enteredNum,
+          (transferSide === 'OUT' ? fromCurrency : toCurrency) as string,
+          (transferSide === 'OUT' ? toCurrency : fromCurrency) as string,
+          base,
+          rateMap,
+        )
+      : null
 
   const isPending = createMutation.isPending || updateMutation.isPending
-  const amountNum = Number(amount)
   const hasEntities = entities.length >= 1
 
   function resolveCurrency(): string | null {
@@ -119,13 +167,10 @@ export function CashTransactionFormDialog({
     event.preventDefault()
     setErrorMsg(null)
 
-    if (!Number.isFinite(amountNum) || amountNum <= 0) {
-      setErrorMsg('El importe debe ser un número mayor que 0.')
-      return
-    }
-
     let fromEntityId: string | null = null
     let toEntityId: string | null = null
+    let outAmount = Number(amount)
+    let toAmountValue: number | null = null
 
     if (type === 'DEPOSIT') {
       if (!toId) return setErrorMsg('Elige la entidad de destino.')
@@ -138,17 +183,56 @@ export function CashTransactionFormDialog({
         return setErrorMsg('Elige las entidades de origen y destino.')
       if (fromId === toId)
         return setErrorMsg('Origen y destino deben ser distintos.')
-      if (entityMap.get(fromId)?.currency !== entityMap.get(toId)?.currency)
-        return setErrorMsg(
-          'Las transferencias entre monedas distintas aún no están soportadas. ' +
-            'Usa una retirada y un ingreso.',
-        )
       fromEntityId = fromId
       toEntityId = toId
+      if (isCrossTransfer) {
+        if (!crossRateAvailable)
+          return setErrorMsg(
+            `Configura el tipo de cambio de ${fromCurrency} y ${toCurrency} antes de continuar.`,
+          )
+        if (transferSide === 'OUT') {
+          if (!(outAmount > 0))
+            return setErrorMsg(
+              `Indica el importe que sale (${fromCurrency}) mayor que 0.`,
+            )
+          const conv = convertBetween(
+            outAmount,
+            fromCurrency as string,
+            toCurrency as string,
+            base,
+            rateMap,
+          )
+          if (conv === null || !(conv > 0))
+            return setErrorMsg('No se pudo calcular el importe recibido.')
+          toAmountValue = round2(conv)
+        } else {
+          const inAmount = Number(toAmount)
+          if (!(inAmount > 0))
+            return setErrorMsg(
+              `Indica el importe que llega (${toCurrency}) mayor que 0.`,
+            )
+          const conv = convertBetween(
+            inAmount,
+            toCurrency as string,
+            fromCurrency as string,
+            base,
+            rateMap,
+          )
+          if (conv === null || !(conv > 0))
+            return setErrorMsg('No se pudo calcular el importe que sale.')
+          outAmount = round2(conv)
+          toAmountValue = inAmount
+        }
+      }
     } else if (type === 'ADJUSTMENT') {
       if (!adjustId) return setErrorMsg('Elige la entidad a ajustar.')
       if (adjustDir === 'ADD') toEntityId = adjustId
       else fromEntityId = adjustId
+    }
+
+    if (!Number.isFinite(outAmount) || outAmount <= 0) {
+      setErrorMsg('El importe debe ser un número mayor que 0.')
+      return
     }
 
     const currency = resolveCurrency()
@@ -158,7 +242,8 @@ export function CashTransactionFormDialog({
       transaction_type: type,
       from_entity_id: fromEntityId,
       to_entity_id: toEntityId,
-      amount: amountNum,
+      amount: outAmount,
+      to_amount: toAmountValue,
       currency,
       exchange_rate_to_base: 1,
       executed_at: toIsoFromDateInput(executedAt),
@@ -235,6 +320,81 @@ export function CashTransactionFormDialog({
             </div>
           )}
 
+          {isCrossTransfer && (
+            <div className="space-y-3 rounded-md border p-3">
+              <p className="text-sm font-medium">
+                Cambio de divisa: {fromCurrency} → {toCurrency}
+              </p>
+              {crossRateAvailable ? (
+                <>
+                  <div className="space-y-2">
+                    <Label>¿Qué importe conoces?</Label>
+                    <Select
+                      value={transferSide}
+                      onValueChange={(v) => setTransferSide(v as TransferSide)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="OUT">
+                          El que sale ({fromCurrency})
+                        </SelectItem>
+                        <SelectItem value="IN">
+                          El que llega ({toCurrency})
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cash-cross-amount">
+                      {transferSide === 'OUT'
+                        ? `Importe que sale (${fromCurrency})`
+                        : `Importe que llega (${toCurrency})`}
+                    </Label>
+                    <Input
+                      id="cash-cross-amount"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      value={transferSide === 'OUT' ? amount : toAmount}
+                      onChange={(e) =>
+                        transferSide === 'OUT'
+                          ? setAmount(e.target.value)
+                          : setToAmount(e.target.value)
+                      }
+                      placeholder="0.00"
+                    />
+                    {computedOther !== null && (
+                      <p className="text-muted-foreground text-xs">
+                        {transferSide === 'OUT'
+                          ? `Llega: ${formatMoney(computedOther, toCurrency as string)}`
+                          : `Sale: ${formatMoney(computedOther, fromCurrency as string)}`}{' '}
+                        · calculado con tu tipo de cambio
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="text-muted-foreground space-y-2 text-xs">
+                  <p>
+                    Necesitas configurar el tipo de cambio de {fromCurrency} y{' '}
+                    {toCurrency} para registrar esta transferencia.
+                  </p>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setRateDialogOpen(true)}
+                  >
+                    Configurar tipos de cambio
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
           {type === 'DEPOSIT' && (
             <EntitySelect
               label="Ingresar en"
@@ -291,21 +451,23 @@ export function CashTransactionFormDialog({
           )}
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="cash-amount">
-                Importe {currency ? `(${currency})` : ''}
-              </Label>
-              <Input
-                id="cash-amount"
-                type="number"
-                inputMode="decimal"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
+            {!isCrossTransfer && (
+              <div className="space-y-2">
+                <Label htmlFor="cash-amount">
+                  Importe {currency ? `(${currency})` : ''}
+                </Label>
+                <Input
+                  id="cash-amount"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="cash-date">Fecha</Label>
               <Input
@@ -350,6 +512,14 @@ export function CashTransactionFormDialog({
           </DialogFooter>
         </form>
       </DialogContent>
+      <FxRatesDialog
+        open={rateDialogOpen}
+        onOpenChange={setRateDialogOpen}
+        base={base}
+        neededCurrencies={[fromCurrency, toCurrency].filter((c): c is string =>
+          Boolean(c),
+        )}
+      />
     </Dialog>
   )
 }

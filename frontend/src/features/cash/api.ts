@@ -11,6 +11,7 @@ export type CashTransactionFormValues = {
   from_entity_id: string | null
   to_entity_id: string | null
   amount: number
+  to_amount: number | null
   currency: string
   exchange_rate_to_base: number
   executed_at: string
@@ -31,6 +32,19 @@ export async function listCashTransactions(
   return data ?? []
 }
 
+/** Obtiene un movimiento de efectivo por id. RLS filtra por dueño. */
+export async function getCashTransactionById(
+  id: string,
+): Promise<CashTransaction | null> {
+  const { data, error } = await supabase
+    .from('cash_transactions')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  return data
+}
+
 export async function createCashTransaction(
   portfolioId: string,
   values: CashTransactionFormValues,
@@ -43,6 +57,7 @@ export async function createCashTransaction(
       from_entity_id: values.from_entity_id,
       to_entity_id: values.to_entity_id,
       amount: values.amount,
+      to_amount: values.to_amount,
       currency: values.currency,
       exchange_rate_to_base: values.exchange_rate_to_base,
       executed_at: values.executed_at,
@@ -65,6 +80,7 @@ export async function updateCashTransaction(
       from_entity_id: values.from_entity_id,
       to_entity_id: values.to_entity_id,
       amount: values.amount,
+      to_amount: values.to_amount,
       currency: values.currency,
       exchange_rate_to_base: values.exchange_rate_to_base,
       executed_at: values.executed_at,

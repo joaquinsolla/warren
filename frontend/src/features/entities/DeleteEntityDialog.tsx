@@ -108,8 +108,10 @@ export function DeleteEntityDialog({
           </div>
           <DialogTitle>Eliminar «{entity?.name}»</DialogTitle>
           <DialogDescription>
-            Solo puedes eliminar una entidad si no tiene movimientos. Si los
-            tiene, la operación se bloqueará para proteger el histórico.
+            La entidad desaparecerá de tus listas, selectores y del patrimonio
+            total. Sus movimientos se conservan en el histórico, marcados como
+            pertenecientes a una entidad eliminada. Esta acción no se puede
+            deshacer.
           </DialogDescription>
         </DialogHeader>
 

@@ -7,7 +7,14 @@ import { SignupPage } from '@/routes/SignupPage'
 import { ForgotPasswordPage } from '@/routes/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/routes/ResetPasswordPage'
 import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
+import { AppLayout } from '@/routes/AppLayout'
 import { DashboardPage } from '@/routes/DashboardPage'
+import { AssetsPage } from '@/routes/AssetsPage'
+import { EntityDetailPage } from '@/routes/EntityDetailPage'
+import { HoldingDetailPage } from '@/routes/HoldingDetailPage'
+import { CashTransactionDetailPage } from '@/routes/CashTransactionDetailPage'
+import { InvestmentDetailPage } from '@/routes/InvestmentDetailPage'
+import { AssetDetailPage } from '@/routes/AssetDetailPage'
 
 function App() {
   return (
@@ -20,15 +27,22 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route
-            path="/"
             element={
               <ProtectedRoute>
                 <PortfolioProvider>
-                  <DashboardPage />
+                  <AppLayout />
                 </PortfolioProvider>
               </ProtectedRoute>
             }
-          />
+          >
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/assets" element={<AssetsPage />} />
+            <Route path="/entities/:id" element={<EntityDetailPage />} />
+            <Route path="/holdings/:id" element={<HoldingDetailPage />} />
+            <Route path="/cash/:id" element={<CashTransactionDetailPage />} />
+            <Route path="/investments/:id" element={<InvestmentDetailPage />} />
+            <Route path="/assets/:id" element={<AssetDetailPage />} />
+          </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

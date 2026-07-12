@@ -20,6 +20,7 @@ export type Database = {
           color: string | null
           created_at: string
           currency: string
+          deleted_at: string | null
           exchange: string | null
           icon_domain: string | null
           id: string
@@ -33,6 +34,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency: string
+          deleted_at?: string | null
           exchange?: string | null
           icon_domain?: string | null
           id?: string
@@ -46,6 +48,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency?: string
+          deleted_at?: string | null
           exchange?: string | null
           icon_domain?: string | null
           id?: string
@@ -67,6 +70,7 @@ export type Database = {
           id: string
           notes: string | null
           portfolio_id: string
+          to_amount: number | null
           to_entity_id: string | null
           transaction_type: Database['public']['Enums']['cash_transaction_type']
           updated_at: string
@@ -81,6 +85,7 @@ export type Database = {
           id?: string
           notes?: string | null
           portfolio_id: string
+          to_amount?: number | null
           to_entity_id?: string | null
           transaction_type: Database['public']['Enums']['cash_transaction_type']
           updated_at?: string
@@ -95,6 +100,7 @@ export type Database = {
           id?: string
           notes?: string | null
           portfolio_id?: string
+          to_amount?: number | null
           to_entity_id?: string | null
           transaction_type?: Database['public']['Enums']['cash_transaction_type']
           updated_at?: string
@@ -129,6 +135,7 @@ export type Database = {
           color: string | null
           created_at: string
           currency: string
+          deleted_at: string | null
           icon_domain: string | null
           id: string
           name: string
@@ -141,6 +148,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency: string
+          deleted_at?: string | null
           icon_domain?: string | null
           id?: string
           name: string
@@ -153,6 +161,7 @@ export type Database = {
           color?: string | null
           created_at?: string
           currency?: string
+          deleted_at?: string | null
           icon_domain?: string | null
           id?: string
           name?: string
@@ -194,6 +203,33 @@ export type Database = {
         }
         Relationships: []
       }
+      fx_rates: {
+        Row: {
+          created_at: string
+          currency: string
+          id: string
+          rate_to_base: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency: string
+          id?: string
+          rate_to_base: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          id?: string
+          rate_to_base?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       holdings: {
         Row: {
           asset_id: string
@@ -202,9 +238,7 @@ export type Database = {
           entity_id: string
           id: string
           invested_amount: number
-          market_value_cache: number
           quantity: number
-          unrealized_profit_cache: number
           updated_at: string
         }
         Insert: {
@@ -214,9 +248,7 @@ export type Database = {
           entity_id: string
           id?: string
           invested_amount?: number
-          market_value_cache?: number
           quantity?: number
-          unrealized_profit_cache?: number
           updated_at?: string
         }
         Update: {
@@ -226,9 +258,7 @@ export type Database = {
           entity_id?: string
           id?: string
           invested_amount?: number
-          market_value_cache?: number
           quantity?: number
-          unrealized_profit_cache?: number
           updated_at?: string
         }
         Relationships: [
@@ -453,6 +483,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      recompute_cash_balances: {
+        Args: { p_portfolio_id: string }
+        Returns: undefined
+      }
+      recompute_holding: {
+        Args: { p_asset_id: string; p_entity_id: string }
+        Returns: undefined
+      }
       user_owns_entity: { Args: { p_entity_id: string }; Returns: boolean }
       user_owns_portfolio: {
         Args: { p_portfolio_id: string }

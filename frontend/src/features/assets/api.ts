@@ -16,13 +16,23 @@ export type AssetFormValues = {
 }
 
 /** Lista los activos del usuario (RLS filtra por dueño). */
-export async function listAssets(): Promise<Asset[]> {
+export async function listAssets(includeDeleted = false): Promise<Asset[]> {
+  let query = supabase.from('assets').select('*')
+  if (!includeDeleted) query = query.is('deleted_at', null)
+  const { data, error } = await query.order('symbol', { ascending: true })
+  if (error) throw error
+  return data ?? []
+}
+
+/** Obtiene un activo por id. RLS filtra por dueño. */
+export async function getAssetById(id: string): Promise<Asset | null> {
   const { data, error } = await supabase
     .from('assets')
     .select('*')
-    .order('symbol', { ascending: true })
+    .eq('id', id)
+    .maybeSingle()
   if (error) throw error
-  return data ?? []
+  return data
 }
 
 /** Crea un activo. user_id se obtiene de la sesión actual. */
@@ -62,7 +72,7 @@ export async function updateAsset(
     .update({
       symbol: values.symbol,
       name: values.name,
-      asset_type: values.asset_type,
+      // asset_type es inmutable: no se envía en updates.
       currency: values.currency,
       isin: values.isin,
       exchange: values.exchange,
@@ -76,7 +86,11 @@ export async function updateAsset(
   return data
 }
 
+/** Borrado lógico: marca el activo como eliminado conservando su histórico. */
 export async function deleteAsset(id: string): Promise<void> {
-  const { error } = await supabase.from('assets').delete().eq('id', id)
+  const { error } = await supabase
+    .from('assets')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('id', id)
   if (error) throw error
 }

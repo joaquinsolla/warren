@@ -9,21 +9,23 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { useDeleteAsset } from '@/features/assets/hooks'
-import type { Asset } from '@/features/assets/api'
+import { useDeleteInvestmentTransaction } from '@/features/investments/hooks'
+import type { InvestmentTransaction } from '@/features/investments/api'
 
-type DeleteAssetDialogProps = {
+type DeleteInvestmentDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  asset: Asset | null
+  portfolioId: string
+  transaction: InvestmentTransaction | null
 }
 
-export function DeleteAssetDialog({
+export function DeleteInvestmentDialog({
   open,
   onOpenChange,
-  asset,
-}: DeleteAssetDialogProps) {
-  const deleteMutation = useDeleteAsset()
+  portfolioId,
+  transaction,
+}: DeleteInvestmentDialogProps) {
+  const deleteMutation = useDeleteInvestmentTransaction(portfolioId)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
 
   React.useEffect(() => {
@@ -31,10 +33,10 @@ export function DeleteAssetDialog({
   }, [open])
 
   async function handleDelete() {
-    if (!asset) return
+    if (!transaction) return
     setErrorMsg(null)
     try {
-      await deleteMutation.mutateAsync(asset.id)
+      await deleteMutation.mutateAsync(transaction.id)
       onOpenChange(false)
     } catch (err) {
       setErrorMsg((err as Error).message)
@@ -48,12 +50,11 @@ export function DeleteAssetDialog({
           <div className="bg-destructive/10 text-destructive mb-2 flex size-10 items-center justify-center rounded-full">
             <TriangleAlertIcon className="size-5" />
           </div>
-          <DialogTitle>Eliminar «{asset?.symbol}»</DialogTitle>
+          <DialogTitle>Eliminar operación</DialogTitle>
           <DialogDescription>
-            El activo desaparecerá de tu catálogo y de los selectores de compra.
-            Si tiene inversiones registradas, sus movimientos se conservan en el
-            histórico, marcados como pertenecientes a un símbolo eliminado. Esta
-            acción no se puede deshacer.
+            El histórico de inversión no suele modificarse. Al eliminar esta
+            operación se recalcularán la posición (FIFO) y el efectivo de la
+            entidad. Úsalo solo para corregir un error.
           </DialogDescription>
         </DialogHeader>
 
@@ -72,7 +73,7 @@ export function DeleteAssetDialog({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={deleteMutation.isPending || !asset}
+            disabled={deleteMutation.isPending || !transaction}
           >
             {deleteMutation.isPending ? 'Eliminando…' : 'Eliminar'}
           </Button>
