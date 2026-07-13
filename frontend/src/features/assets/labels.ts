@@ -23,3 +23,20 @@ export const ASSET_TYPE_ORDER: AssetType[] = [
   'FOREX',
   'OTHER',
 ]
+
+/** Término para la cantidad de cada activo según su tipo (plural). */
+export const ASSET_UNIT_LABELS: Record<AssetType, string> = {
+  STOCK: 'Acciones',
+  ETF: 'Participaciones',
+  INDEX: 'Participaciones',
+  CRYPTO: 'Unidades',
+  BOND: 'Títulos',
+  FUND: 'Participaciones',
+  COMMODITY: 'Unidades',
+  FOREX: 'Unidades',
+  OTHER: 'Unidades',
+}
+
+export function unitLabel(type: AssetType | undefined): string {
+  return type ? ASSET_UNIT_LABELS[type] : 'Unidades'
+}

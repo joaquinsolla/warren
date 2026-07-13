@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/currencies'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { useHolding } from '@/features/holdings/hooks'
 import { useAsset } from '@/features/assets/hooks'
+import { unitLabel } from '@/features/assets/labels'
 import { useEntity } from '@/features/entities/hooks'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
 import { ObjectivesList } from '@/features/objectives/ObjectivesList'
@@ -125,7 +126,7 @@ export function HoldingDetailPage() {
         </div>
 
         <dl className="bg-card rounded-xl border p-4">
-          <Field label="Acciones">{holding.quantity}</Field>
+          <Field label={unitLabel(asset?.asset_type)}>{holding.quantity}</Field>
           <Field label="Invertido (coste)">
             {formatMoney(holding.invested_amount, currency)}
           </Field>
@@ -140,7 +141,7 @@ export function HoldingDetailPage() {
               <Field label="Valor estimado">
                 {formatMoney(estValue!, currency)}
               </Field>
-              <Field label="Plusvalía latente">
+              <Field label="Rendimiento">
                 <span className={pnl! >= 0 ? 'text-positive' : 'text-negative'}>
                   {pnl! >= 0 ? '+' : ''}
                   {formatMoney(pnl!, currency)}

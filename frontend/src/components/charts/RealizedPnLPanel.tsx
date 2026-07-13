@@ -44,7 +44,7 @@ export function RealizedPnLPanel({
 
   const rows = [
     {
-      label: 'Coste de lo vendido',
+      label: 'Coste de compra',
       value: data.costBasis,
       color: 'var(--muted-foreground)',
     },
@@ -101,20 +101,28 @@ export function RealizedPnLPanel({
             ))}
           </div>
 
-          <div className="flex items-baseline justify-between border-t pt-3">
-            <span className="text-sm font-medium">Resultado realizado</span>
-            <span className={`text-right ${signClass}`}>
-              <span className="text-lg font-semibold tabular-nums">
-                {positive ? '+' : ''}
-                {formatMoney(data.pnl, base)}
-              </span>
-              {data.returnPct !== null && (
-                <span className="ml-2 text-sm tabular-nums">
-                  ({positive ? '+' : ''}
-                  {(data.returnPct * 100).toFixed(1)}%)
+          <div className="border-t pt-3">
+            <div className="flex items-baseline justify-between">
+              <span className="text-sm font-medium">Resultado realizado</span>
+              <span className={`text-right ${signClass}`}>
+                <span className="text-lg font-semibold tabular-nums">
+                  {positive ? '+' : ''}
+                  {formatMoney(data.pnl, base)}
                 </span>
-              )}
-            </span>
+                {data.returnPct !== null && (
+                  <span className="ml-2 text-sm tabular-nums">
+                    ({positive ? '+' : ''}
+                    {(data.returnPct * 100).toFixed(1)}%)
+                  </span>
+                )}
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Se calcula sobre las ventas cerradas en el periodo.
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              Comisiones e impuestos ya deducidos de las compras y ventas.
+            </p>
           </div>
 
           <div className="space-y-1 border-t pt-3 text-sm">

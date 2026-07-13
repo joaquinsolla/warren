@@ -73,13 +73,9 @@ export function AssetDetailPage() {
     if (!asset) return
     setPriceMsg(null)
     const raw = priceDraft.trim()
-    if (raw === '') {
-      await updatePrice.mutateAsync({ id: asset.id, price: null })
-      return
-    }
     const v = Number(raw)
-    if (!Number.isFinite(v) || v < 0) {
-      setPriceMsg('Introduce un precio válido.')
+    if (raw === '' || !Number.isFinite(v) || v <= 0) {
+      setPriceMsg('Introduce un precio mayor que 0.')
       return
     }
     try {
@@ -177,7 +173,7 @@ export function AssetDetailPage() {
                 className="pl-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 value={priceDraft}
                 onChange={(e) => setPriceDraft(e.target.value)}
-                placeholder="Sin precio"
+                placeholder="150.25"
                 disabled={Boolean(asset.deleted_at)}
               />
             </div>
@@ -194,8 +190,8 @@ export function AssetDetailPage() {
             <p className="text-destructive text-xs">{priceMsg}</p>
           ) : (
             <p className="text-muted-foreground text-xs">
-              Se usa solo para estimar tu valor de mercado y plusvalía; no crea
-              operaciones.
+              Se usa solo para estimar tu valor de mercado y rendimiento; no
+              crea operaciones.
             </p>
           )}
         </div>

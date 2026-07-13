@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { formatMoney, getCurrency } from '@/lib/currencies'
 import { useEntities } from '@/features/entities/hooks'
 import { useAssets } from '@/features/assets/hooks'
+import { unitLabel } from '@/features/assets/labels'
 import { useHoldings } from '@/features/holdings/hooks'
 import {
   useCreateInvestmentTransaction,
@@ -115,6 +116,7 @@ export function InvestmentFormDialog({
 
   const entity = entityMap.get(entityId)
   const lockedAsset = assetMap.get(assetId)
+  const unit = unitLabel(lockedAsset?.asset_type)
   const currency = entity?.currency ?? 'EUR'
   const symbol = getCurrency(currency)?.symbol ?? currency
   const qtyNum = Number(quantity)
@@ -178,7 +180,7 @@ export function InvestmentFormDialog({
 
   const noSellMsg =
     lockEntity && lockAsset
-      ? 'No tienes participaciones de este activo para vender.'
+      ? `No tienes ${unit.toLowerCase()} de este activo para vender.`
       : lockEntity
         ? 'No tienes posiciones en este bróker para vender.'
         : lockAsset
@@ -217,7 +219,7 @@ export function InvestmentFormDialog({
       )
     if (!isEdit && type === 'SELL' && qtyNum > heldQty)
       return setErrorMsg(
-        `No tienes suficientes participaciones: tienes ${heldQty}, ` +
+        `No tienes suficientes ${unit.toLowerCase()}: tienes ${heldQty}, ` +
           `intentas vender ${qtyNum}.`,
       )
 
@@ -398,7 +400,7 @@ export function InvestmentFormDialog({
                   </div>
                   {type === 'SELL' && (
                     <p className="text-muted-foreground text-xs">
-                      Tienes {heldQty} participaciones en esta entidad.
+                      Tienes {heldQty} {unit.toLowerCase()} en esta entidad.
                     </p>
                   )}
                 </div>
@@ -425,7 +427,7 @@ export function InvestmentFormDialog({
                   )}
                   {assetId && type === 'SELL' && (
                     <p className="text-muted-foreground text-xs">
-                      Tienes {heldQty} participaciones en esta entidad.
+                      Tienes {heldQty} {unit.toLowerCase()} en esta entidad.
                     </p>
                   )}
                 </div>
@@ -433,7 +435,7 @@ export function InvestmentFormDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="inv-qty">Acciones</Label>
+                  <Label htmlFor="inv-qty">{unit}</Label>
                   <Input
                     id="inv-qty"
                     type="number"

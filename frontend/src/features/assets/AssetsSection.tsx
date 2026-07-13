@@ -1,7 +1,13 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MoreVerticalIcon, PencilIcon, PlusIcon } from 'lucide-react'
+import {
+  MoreVerticalIcon,
+  PencilIcon,
+  PlusIcon,
+  SearchIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +27,7 @@ export function AssetsSection() {
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Asset | null>(null)
+  const [query, setQuery] = React.useState('')
 
   function openCreate() {
     setEditing(null)
@@ -32,9 +39,18 @@ export function AssetsSection() {
     setFormOpen(true)
   }
 
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? assets.filter(
+        (a) =>
+          a.symbol.toLowerCase().includes(q) ||
+          a.name.toLowerCase().includes(q),
+      )
+    : assets
+
   const grouped = ASSET_TYPE_ORDER.map((type) => ({
     type,
-    items: assets.filter((a) => a.asset_type === type),
+    items: filtered.filter((a) => a.asset_type === type),
   })).filter((group) => group.items.length > 0)
 
   return (
@@ -62,9 +78,27 @@ export function AssetsSection() {
         </p>
       )}
 
+      {!isLoading && !error && assets.length > 0 && (
+        <div className="relative">
+          <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre o símbolo…"
+            className="pl-9"
+          />
+        </div>
+      )}
+
       {!isLoading && !error && assets.length === 0 && (
         <div className="text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm">
           Aún no has añadido ningún activo a tu catálogo.
+        </div>
+      )}
+
+      {!isLoading && !error && assets.length > 0 && grouped.length === 0 && (
+        <div className="text-muted-foreground rounded-xl border border-dashed p-10 text-center text-sm">
+          Ningún activo coincide con «{query}».
         </div>
       )}
 

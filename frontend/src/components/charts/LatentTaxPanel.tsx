@@ -49,8 +49,8 @@ export function LatentTaxPanel({
   if (positions.length === 0) {
     return (
       <div className="text-muted-foreground flex min-h-[100px] items-center justify-center rounded-xl border border-dashed p-4 text-center text-sm">
-        Ajusta el precio actual de tus posiciones para estimar la plusvalía
-        latente y su impuesto.
+        Ajusta el precio actual de tus posiciones para estimar el rendimiento y
+        su impuesto.
       </div>
     )
   }
@@ -75,9 +75,7 @@ export function LatentTaxPanel({
           <thead className="bg-muted/50 text-muted-foreground text-xs">
             <tr>
               <th className="px-3 py-2 text-left font-medium">Activo</th>
-              <th className="px-3 py-2 text-right font-medium">
-                Plusvalía latente
-              </th>
+              <th className="px-3 py-2 text-right font-medium">Rendimiento</th>
             </tr>
           </thead>
           <tbody className="divide-y">

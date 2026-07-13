@@ -48,6 +48,7 @@ export function AssetFormDialog({
   const [name, setName] = React.useState('')
   const [assetType, setAssetType] = React.useState<AssetType>('STOCK')
   const [currency, setCurrency] = React.useState('EUR')
+  const [price, setPrice] = React.useState('')
   const [isin, setIsin] = React.useState('')
   const [exchange, setExchange] = React.useState('')
   const [iconDomain, setIconDomain] = React.useState('')
@@ -65,6 +66,7 @@ export function AssetFormDialog({
     setName(asset?.name ?? '')
     setAssetType(asset?.asset_type ?? 'STOCK')
     setCurrency(asset?.currency ?? profile?.base_currency ?? 'EUR')
+    setPrice(asset?.manual_price != null ? String(asset.manual_price) : '')
     setIsin(asset?.isin ?? '')
     setExchange(asset?.exchange ?? '')
     setIconDomain(asset?.icon_domain ?? '')
@@ -87,6 +89,11 @@ export function AssetFormDialog({
       setErrorMsg('El nombre es obligatorio.')
       return
     }
+    const priceNum = Number(price)
+    if (price.trim() === '' || !Number.isFinite(priceNum) || priceNum <= 0) {
+      setErrorMsg('El precio actual es obligatorio y debe ser mayor que 0.')
+      return
+    }
     const values = {
       symbol: trimmedSymbol,
       name: trimmedName,
@@ -96,6 +103,7 @@ export function AssetFormDialog({
       exchange: exchange.trim() || null,
       icon_domain: cleanDomain,
       color,
+      manual_price: priceNum,
     }
     try {
       if (isEdit && asset) {
@@ -204,20 +212,35 @@ export function AssetFormDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="asset-exchange">
-                  Mercado{' '}
-                  <span className="text-muted-foreground font-normal">
-                    (opcional)
-                  </span>
-                </Label>
+                <Label htmlFor="asset-price">Precio actual</Label>
                 <Input
-                  id="asset-exchange"
-                  value={exchange}
-                  onChange={(e) => setExchange(e.target.value)}
-                  placeholder="NASDAQ, XETRA…"
-                  maxLength={40}
+                  id="asset-price"
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="any"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="150.25"
+                  className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="asset-exchange">
+                Mercado{' '}
+                <span className="text-muted-foreground font-normal">
+                  (opcional)
+                </span>
+              </Label>
+              <Input
+                id="asset-exchange"
+                value={exchange}
+                onChange={(e) => setExchange(e.target.value)}
+                placeholder="NASDAQ, XETRA…"
+                maxLength={40}
+              />
             </div>
 
             <div className="space-y-2">
@@ -311,7 +334,9 @@ export function AssetFormDialog({
               </Button>
               <Button
                 type="submit"
-                disabled={isPending || !trimmedSymbol || !trimmedName}
+                disabled={
+                  isPending || !trimmedSymbol || !trimmedName || !price.trim()
+                }
               >
                 {isEdit ? 'Guardar cambios' : 'Crear activo'}
               </Button>

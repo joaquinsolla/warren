@@ -6,6 +6,7 @@ import { brandStyle } from '@/lib/brand'
 import { formatMoney } from '@/lib/currencies'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { useAsset } from '@/features/assets/hooks'
+import { unitLabel } from '@/features/assets/labels'
 import { useEntity } from '@/features/entities/hooks'
 import {
   investmentTransactionKey,
@@ -118,7 +119,7 @@ export function InvestmentDetailPage() {
               '—'
             )}
           </Field>
-          <Field label="Acciones">{tx.quantity}</Field>
+          <Field label={unitLabel(asset?.asset_type)}>{tx.quantity}</Field>
           <Field label="Precio unitario">
             {formatMoney(tx.price_per_unit, tx.currency)}
           </Field>
@@ -131,7 +132,7 @@ export function InvestmentDetailPage() {
             {formatMoney(net, tx.currency)}
           </Field>
           {tx.remaining_quantity != null && isBuy && (
-            <Field label="Acciones pendientes (FIFO)">
+            <Field label={`${unitLabel(asset?.asset_type)} pendientes (FIFO)`}>
               {tx.remaining_quantity}
             </Field>
           )}

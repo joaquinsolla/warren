@@ -4,6 +4,7 @@ import { brandStyle } from '@/lib/brand'
 import { formatMoney } from '@/lib/currencies'
 import type { Holding } from '@/features/holdings/api'
 import type { Asset } from '@/features/assets/api'
+import { unitLabel } from '@/features/assets/labels'
 
 export function HoldingCard({
   holding,
@@ -50,7 +51,9 @@ export function HoldingCard({
       </div>
       <dl className="space-y-1 text-sm">
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Acciones</dt>
+          <dt className="text-muted-foreground">
+            {unitLabel(asset?.asset_type)}
+          </dt>
           <dd className="tabular-nums">{h.quantity}</dd>
         </div>
         <div className="flex justify-between">
@@ -73,7 +76,7 @@ export function HoldingCard({
               <dd className="tabular-nums">{formatMoney(price!, currency)}</dd>
             </div>
             <div className="flex justify-between">
-              <dt className="text-muted-foreground">Plusvalía</dt>
+              <dt className="text-muted-foreground">Rendimiento</dt>
               <dd
                 className={`tabular-nums ${positive ? 'text-positive' : 'text-negative'}`}
               >

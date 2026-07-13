@@ -10,12 +10,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { formatMoney, getCurrency } from '@/lib/currencies'
-import { buildRateMap, convertToBase } from '@/lib/fx'
+import { getCurrency } from '@/lib/currencies'
 import { useEntities } from '@/features/entities/hooks'
 import { useAssets, useUpdateAssetPrice } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
-import { useFxRates } from '@/features/fx/hooks'
 
 type PriceUpdateDialogProps = {
   open: boolean
@@ -57,14 +55,12 @@ export function PriceUpdateDialog({
   const entityIds = React.useMemo(() => entities.map((e) => e.id), [entities])
   const { data: holdings = [] } = useHoldings(portfolioId, entityIds)
   const { data: activeAssets = [] } = useAssets()
-  const { data: rates = [] } = useFxRates()
   const update = useUpdateAssetPrice()
 
   const entityMap = React.useMemo(
     () => new Map(entities.map((e) => [e.id, e])),
     [entities],
   )
-  const rateMap = React.useMemo(() => buildRateMap(rates), [rates])
 
   const rows = React.useMemo<AssetRow[]>(() => {
     const acc = new Map<
@@ -119,17 +115,9 @@ export function PriceUpdateDialog({
   async function handleSave(row: AssetRow) {
     setErrorMsg(null)
     const raw = drafts[row.assetId]?.trim() ?? ''
-    if (raw === '') {
-      try {
-        await update.mutateAsync({ id: row.assetId, price: null })
-      } catch (err) {
-        setErrorMsg((err as Error).message)
-      }
-      return
-    }
     const value = Number(raw)
-    if (!Number.isFinite(value) || value < 0) {
-      setErrorMsg(`Introduce un precio válido para ${row.symbol}.`)
+    if (raw === '' || !Number.isFinite(value) || value <= 0) {
+      setErrorMsg(`Introduce un precio mayor que 0 para ${row.symbol}.`)
       return
     }
     try {
@@ -139,31 +127,6 @@ export function PriceUpdateDialog({
     }
   }
 
-  // Totales estimados (a base) usando solo los activos con precio guardado.
-  let investedBase = 0
-  let estimatedBase = 0
-  let hasEstimate = false
-  const missing = new Set<string>()
-  for (const r of rows) {
-    if (r.manualPrice == null) continue
-    const inv = convertToBase(r.totalInvested, r.currency, base, rateMap)
-    const est = convertToBase(
-      r.totalQty * r.manualPrice,
-      r.currency,
-      base,
-      rateMap,
-    )
-    if (inv === null || est === null) {
-      missing.add(r.currency)
-      continue
-    }
-    hasEstimate = true
-    investedBase += inv
-    estimatedBase += est
-  }
-  const pnlBase = estimatedBase - investedBase
-  const pnlPct = investedBase > 0 ? (pnlBase / investedBase) * 100 : null
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
@@ -171,7 +134,7 @@ export function PriceUpdateDialog({
           <DialogTitle>Actualizar precios</DialogTitle>
           <DialogDescription>
             Pon el precio actual de cada activo para estimar tu valor de mercado
-            y plusvalía latente. Es solo una estimación; no crea operaciones.
+            y rendimiento. Es solo una estimación; no crea operaciones.
           </DialogDescription>
         </DialogHeader>
 
@@ -235,39 +198,6 @@ export function PriceUpdateDialog({
                 </div>
               )
             })}
-          </div>
-        )}
-
-        {hasEstimate && (
-          <div className="space-y-1 border-t pt-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Invertido a coste</span>
-              <span className="tabular-nums">
-                {formatMoney(investedBase, base)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Valor estimado</span>
-              <span className="tabular-nums">
-                {formatMoney(estimatedBase, base)}
-              </span>
-            </div>
-            <div className="flex justify-between font-medium">
-              <span>Plusvalía latente</span>
-              <span
-                className={`tabular-nums ${pnlBase >= 0 ? 'text-positive' : 'text-negative'}`}
-              >
-                {pnlBase >= 0 ? '+' : ''}
-                {formatMoney(pnlBase, base)}
-                {pnlPct != null &&
-                  ` (${pnlBase >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`}
-              </span>
-            </div>
-            {missing.size > 0 && (
-              <p className="text-muted-foreground text-xs">
-                Faltan tipos de cambio para: {[...missing].join(', ')}.
-              </p>
-            )}
           </div>
         )}
 

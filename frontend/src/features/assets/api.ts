@@ -13,6 +13,7 @@ export type AssetFormValues = {
   exchange: string | null
   icon_domain: string | null
   color: string | null
+  manual_price: number
 }
 
 /** Lista los activos del usuario (RLS filtra por dueño). */
@@ -56,6 +57,8 @@ export async function createAsset(values: AssetFormValues): Promise<Asset> {
       exchange: values.exchange,
       icon_domain: values.icon_domain,
       color: values.color,
+      manual_price: values.manual_price,
+      manual_price_at: new Date().toISOString(),
     })
     .select()
     .single()
@@ -78,6 +81,8 @@ export async function updateAsset(
       exchange: values.exchange,
       icon_domain: values.icon_domain,
       color: values.color,
+      manual_price: values.manual_price,
+      manual_price_at: new Date().toISOString(),
     })
     .eq('id', id)
     .select()
@@ -96,19 +101,19 @@ export async function deleteAsset(id: string): Promise<void> {
 }
 
 /**
- * Actualiza el precio manual (estimación) de un activo. Al fijar un precio se
- * guarda también la fecha; pasar null lo borra. No toca el histórico ni el
- * patrimonio a coste, solo la vista de valor estimado.
+ * Actualiza el precio manual (estimación) de un activo, guardando también la
+ * fecha. El precio es obligatorio y debe ser positivo. No toca el histórico ni
+ * el patrimonio a coste, solo la vista de valor estimado.
  */
 export async function updateAssetPrice(
   id: string,
-  price: number | null,
+  price: number,
 ): Promise<Asset> {
   const { data, error } = await supabase
     .from('assets')
     .update({
       manual_price: price,
-      manual_price_at: price === null ? null : new Date().toISOString(),
+      manual_price_at: new Date().toISOString(),
     })
     .eq('id', id)
     .select()

@@ -73,7 +73,7 @@ export function useDeleteAsset() {
 export function useUpdateAssetPrice() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, price }: { id: string; price: number | null }) =>
+    mutationFn: ({ id, price }: { id: string; price: number }) =>
       updateAssetPrice(id, price),
     onSuccess: (_data, { id }) => {
       queryClient.invalidateQueries({ queryKey: assetsKey })

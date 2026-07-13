@@ -196,7 +196,6 @@ export function EntityDetailPage() {
   )
   const latentPnl = estimatedInv - investedCost
   const latentPct = investedCost > 0 ? (latentPnl / investedCost) * 100 : null
-  const costTotal = entity.cash_balance_cache + investedCost
   const balanceTotal = entity.cash_balance_cache + estimatedInv
 
   // Posiciones con precio manual, para el escenario "si vendieras hoy".
@@ -256,11 +255,16 @@ export function EntityDetailPage() {
                 )}
                 {isBroker && hasPrices && (
                   <p className="mt-0.5 text-xs">
-                    <span className="text-muted-foreground">A coste </span>
-                    <span className="tabular-nums">
-                      {formatMoney(costTotal, entity.currency)}
+                    <span className="text-muted-foreground">
+                      Coste inversión{' '}
                     </span>
-                    <span className="text-muted-foreground"> · Plusvalía </span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {formatMoney(investedCost, entity.currency)}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {' '}
+                      · Rendimiento{' '}
+                    </span>
                     <span
                       className={`tabular-nums ${latentPnl >= 0 ? 'text-positive' : 'text-negative'}`}
                     >

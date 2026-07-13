@@ -25,8 +25,8 @@ export type Database = {
           icon_domain: string | null
           id: string
           isin: string | null
-          manual_price: number | null
-          manual_price_at: string | null
+          manual_price: number
+          manual_price_at: string
           name: string
           symbol: string
           user_id: string
@@ -41,8 +41,8 @@ export type Database = {
           icon_domain?: string | null
           id?: string
           isin?: string | null
-          manual_price?: number | null
-          manual_price_at?: string | null
+          manual_price: number
+          manual_price_at?: string
           name: string
           symbol: string
           user_id: string
@@ -57,8 +57,8 @@ export type Database = {
           icon_domain?: string | null
           id?: string
           isin?: string | null
-          manual_price?: number | null
-          manual_price_at?: string | null
+          manual_price?: number
+          manual_price_at?: string
           name?: string
           symbol?: string
           user_id?: string
