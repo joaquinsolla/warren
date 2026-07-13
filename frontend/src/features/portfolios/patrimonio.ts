@@ -25,6 +25,12 @@ export function buildPatrimonioTimeline(params: {
   invTxs: InvestmentTransaction[]
   base: string
   rateMap: RateMap
+  /**
+   * Revaluaciones por precios manuales: cada una aporta un `delta` (valor
+   * estimado − coste, en base) en el instante `at` del ajuste. Se dibujan como
+   * escalones al final de la serie, dejando la parte histórica a coste intacta.
+   */
+  revaluations?: { at: number; delta: number }[]
 }): TimelinePoint[] {
   const { entities, cashTxs, invTxs, base, rateMap } = params
   const curOf = new Map(entities.map((e) => [e.id, e.currency]))
@@ -109,6 +115,25 @@ export function buildPatrimonioTimeline(params: {
     // Colapsa eventos del mismo instante en un único punto (el estado final).
     if (last && last.t === ev.t) last.value = value
     else points.push({ t: ev.t, value })
+  }
+
+  // Escalones de revaluación por precios manuales: la línea se mantiene a coste
+  // y salta al valor estimado en el instante de cada ajuste (parte derecha).
+  const { revaluations } = params
+  if (revaluations && revaluations.length > 0 && points.length > 0) {
+    const sorted = [...revaluations]
+      .filter((r) => Math.abs(r.delta) > EPS)
+      .sort((a, b) => a.at - b.at)
+    let running = points[points.length - 1].value
+    let prevT = points[points.length - 1].t
+    for (const r of sorted) {
+      const at = Math.max(r.at, prevT + 2)
+      // Mantiene el valor previo hasta justo antes del ajuste (escalón).
+      points.push({ t: at - 1, value: running })
+      running += r.delta
+      points.push({ t: at, value: running })
+      prevT = at
+    }
   }
   return points
 }
@@ -267,4 +292,86 @@ export function buildRealizedPnL(
     taxes,
     hasSells,
   }
+}
+
+export type RealizedYear = {
+  /** Año fiscal de inicio (para ordenar). */
+  key: number
+  /** Etiqueta a mostrar (p. ej. "2024" o "2024/25"). */
+  label: string
+  /** Ganancia/pérdida neta realizada del periodo (puede ser negativa). */
+  netGain: number
+  proceeds: number
+  costBasis: number
+}
+
+/**
+ * Reparte la plusvalía realizada (FIFO) por año, para estimar el impuesto de
+ * plusvalías periodo a periodo. Cada venta se imputa al año fiscal de su
+ * `executed_at`. `fiscalStartMonth` (1-12) define el inicio del año fiscal: 1 =
+ * año natural; otros valores (p. ej. 4 para Reino Unido) desplazan el corte.
+ *
+ * Devuelve los años de más reciente a más antiguo. Asume moneda única (la del
+ * bróker), igual que `buildRealizedPnL`.
+ */
+export function buildRealizedByYear(
+  invTxs: InvestmentTransaction[],
+  fiscalStartMonth = 1,
+): RealizedYear[] {
+  const sorted = [...invTxs].sort(
+    (a, b) =>
+      new Date(a.executed_at).getTime() - new Date(b.executed_at).getTime() ||
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  )
+
+  const lots = new Map<string, { qty: number; unit: number }[]>()
+  const byYear = new Map<
+    number,
+    { netGain: number; proceeds: number; costBasis: number }
+  >()
+
+  for (const tx of sorted) {
+    if (tx.transaction_type === 'BUY') {
+      const cost = tx.gross_amount + tx.fees + tx.taxes
+      const arr = lots.get(tx.asset_id) ?? []
+      arr.push({ qty: tx.quantity, unit: cost / tx.quantity })
+      lots.set(tx.asset_id, arr)
+    } else {
+      const arr = lots.get(tx.asset_id) ?? []
+      let toConsume = tx.quantity
+      let consumedCost = 0
+      while (toConsume > EPS && arr.length > 0) {
+        const lot = arr[0]
+        const take = Math.min(lot.qty, toConsume)
+        consumedCost += take * lot.unit
+        lot.qty -= take
+        toConsume -= take
+        if (lot.qty <= EPS) arr.shift()
+      }
+      const proceeds = tx.gross_amount - tx.fees - tx.taxes
+      const d = new Date(tx.executed_at)
+      const fy =
+        d.getMonth() + 1 >= fiscalStartMonth
+          ? d.getFullYear()
+          : d.getFullYear() - 1
+      const cur = byYear.get(fy) ?? { netGain: 0, proceeds: 0, costBasis: 0 }
+      cur.netGain += proceeds - consumedCost
+      cur.proceeds += proceeds
+      cur.costBasis += consumedCost
+      byYear.set(fy, cur)
+    }
+  }
+
+  return [...byYear.entries()]
+    .map(([key, v]) => ({
+      key,
+      label:
+        fiscalStartMonth === 1
+          ? String(key)
+          : `${key}/${String((key + 1) % 100).padStart(2, '0')}`,
+      netGain: v.netGain,
+      proceeds: v.proceeds,
+      costBasis: v.costBasis,
+    }))
+    .sort((a, b) => b.key - a.key)
 }

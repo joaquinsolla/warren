@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatMoney, getCurrency } from '@/lib/currencies'
@@ -199,8 +200,11 @@ export function InvestmentFormDialog({
 
     if (!entityId) return setErrorMsg('Elige la entidad (bróker).')
     if (!assetId) return setErrorMsg('Elige el activo.')
+    if (!executedAt) return setErrorMsg('Indica la fecha de la operación.')
     if (!Number.isFinite(qtyNum) || qtyNum <= 0)
       return setErrorMsg('La cantidad debe ser mayor que 0.')
+    if (type === 'BUY' && (!Number.isFinite(priceNum) || priceNum <= 0))
+      return setErrorMsg('El precio de compra debe ser mayor que 0.')
     if (!Number.isFinite(priceNum) || priceNum < 0)
       return setErrorMsg('El precio no puede ser negativo.')
     if (feesNum < 0 || taxesNum < 0)
@@ -429,7 +433,7 @@ export function InvestmentFormDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label htmlFor="inv-qty">Cantidad</Label>
+                  <Label htmlFor="inv-qty">Acciones</Label>
                   <Input
                     id="inv-qty"
                     type="number"
@@ -534,11 +538,10 @@ export function InvestmentFormDialog({
 
               <div className="space-y-2">
                 <Label htmlFor="inv-date">Fecha</Label>
-                <Input
+                <DateInput
                   id="inv-date"
-                  type="date"
                   value={executedAt}
-                  onChange={(e) => setExecutedAt(e.target.value)}
+                  onChange={setExecutedAt}
                 />
               </div>
 

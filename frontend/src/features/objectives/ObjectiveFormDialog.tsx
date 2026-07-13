@@ -47,8 +47,6 @@ export function ObjectiveFormDialog({
 
   const [body, setBody] = React.useState('')
   const [price, setPrice] = React.useState('')
-  const [date, setDate] = React.useState('')
-  const [isActive, setIsActive] = React.useState(true)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
 
@@ -59,8 +57,6 @@ export function ObjectiveFormDialog({
     setPrice(
       objective?.target_price != null ? String(objective.target_price) : '',
     )
-    setDate(objective?.target_date ?? '')
-    setIsActive(objective?.is_active ?? true)
   }, [open, objective])
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -73,10 +69,9 @@ export function ObjectiveFormDialog({
     const priceNum = price === '' ? null : Number(price)
     const hasBody = trimmedBody.length > 0
     const hasPrice = priceNum !== null
-    const hasDate = date !== ''
 
-    if (!hasBody && !hasPrice && !hasDate) {
-      setErrorMsg('Define al menos una meta: estrategia, precio o fecha.')
+    if (!hasBody && !hasPrice) {
+      setErrorMsg('Define al menos una meta: estrategia o precio.')
       return
     }
     if (hasPrice && (!Number.isFinite(priceNum) || (priceNum as number) <= 0)) {
@@ -87,8 +82,7 @@ export function ObjectiveFormDialog({
     const values = {
       target_body: hasBody ? trimmedBody : null,
       target_price: hasPrice ? priceNum : null,
-      target_date: hasDate ? date : null,
-      is_active: isActive,
+      target_date: null,
     }
 
     try {
@@ -125,7 +119,7 @@ export function ObjectiveFormDialog({
             </DialogHeader>
 
             <div className="space-y-2">
-              <Label htmlFor="obj-body">Estrategia / motivo</Label>
+              <Label htmlFor="obj-body">Estrategia</Label>
               <Textarea
                 id="obj-body"
                 value={body}
@@ -135,50 +129,24 @@ export function ObjectiveFormDialog({
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="obj-price">
-                  Precio objetivo ({currency}){' '}
-                  <span className="text-muted-foreground font-normal">
-                    (opcional)
-                  </span>
-                </Label>
-                <Input
-                  id="obj-price"
-                  type="number"
-                  inputMode="decimal"
-                  min="0"
-                  step="any"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="250"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="obj-date">
-                  Fecha límite{' '}
-                  <span className="text-muted-foreground font-normal">
-                    (opcional)
-                  </span>
-                </Label>
-                <Input
-                  id="obj-date"
-                  type="date"
-                  value={date}
-                  onChange={(e) => setDate(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="size-4"
+            <div className="space-y-2">
+              <Label htmlFor="obj-price">
+                Precio objetivo ({currency}){' '}
+                <span className="text-muted-foreground font-normal">
+                  (opcional)
+                </span>
+              </Label>
+              <Input
+                id="obj-price"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="any"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="250"
               />
-              Objetivo activo (desmárcalo para pausarlo)
-            </label>
+            </div>
 
             {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}
 

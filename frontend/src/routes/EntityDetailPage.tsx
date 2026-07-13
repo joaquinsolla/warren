@@ -6,8 +6,8 @@ import {
   ArrowRightLeftIcon,
   ArrowUpRightIcon,
   ChartPieIcon,
-  PencilIcon,
   PlusIcon,
+  ReceiptTextIcon,
   SlidersHorizontalIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -29,10 +29,12 @@ import { CASH_TYPE_LABELS } from '@/features/cash/labels'
 import type { CashTransactionType } from '@/features/cash/api'
 import { useAllAssets } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
+import { HoldingCard } from '@/features/holdings/HoldingCard'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
 import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
 import {
   BackButton,
+  EditButton,
   LoadMoreButton,
   NotFound,
   useLoadMore,
@@ -40,6 +42,9 @@ import {
 import { buildPatrimonioTimeline } from '@/features/portfolios/patrimonio'
 import { GrowthChart } from '@/components/charts/GrowthChart'
 import { RealizedPnLPanel } from '@/components/charts/RealizedPnLPanel'
+import { TaxAnalysisPanel } from '@/components/charts/TaxAnalysisPanel'
+import { LatentTaxPanel } from '@/components/charts/LatentTaxPanel'
+import { useProfile } from '@/features/profile/hooks'
 const TYPE_ICON: Record<
   CashTransactionType,
   React.ComponentType<{ className?: string }>
@@ -54,6 +59,8 @@ const dateFmt = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
 })
 
 export function EntityDetailPage() {
@@ -65,6 +72,7 @@ export function EntityDetailPage() {
   const { data: allEntities = [] } = useAllEntities(portfolioId)
   const { data: cashTxs = [] } = useCashTransactions(portfolioId)
   const { data: assets = [] } = useAllAssets()
+  const { data: profile } = useProfile()
 
   const isBroker = entity?.type === 'BROKER'
   const brokerIds = React.useMemo(() => (id ? [id] : []), [id])
@@ -81,6 +89,8 @@ export function EntityDetailPage() {
   const [cashFormOpen, setCashFormOpen] = React.useState(false)
   const [invFormOpen, setInvFormOpen] = React.useState(false)
   const [analysisOpen, setAnalysisOpen] = React.useState(false)
+  const [taxOpen, setTaxOpen] = React.useState(false)
+  const [taxView, setTaxView] = React.useState<'today' | 'realized'>('today')
 
   function refresh(open: boolean) {
     if (!open && id) {
@@ -103,23 +113,52 @@ export function EntityDetailPage() {
     [cashTxs, id],
   )
 
-  const invPaged = useLoadMore(investmentTxs)
-  const cashPaged = useLoadMore(entityCash)
+  const isBrokerMov = entity?.type === 'BROKER'
+  const movements = React.useMemo(() => {
+    type Mov =
+      | { kind: 'inv'; at: number; tx: (typeof investmentTxs)[number] }
+      | { kind: 'cash'; at: number; tx: (typeof entityCash)[number] }
+    const out: Mov[] = []
+    if (isBrokerMov) {
+      for (const t of investmentTxs)
+        out.push({ kind: 'inv', at: new Date(t.executed_at).getTime(), tx: t })
+    }
+    for (const t of entityCash)
+      out.push({ kind: 'cash', at: new Date(t.executed_at).getTime(), tx: t })
+    out.sort((a, b) => b.at - a.at)
+    return out
+  }, [isBrokerMov, investmentTxs, entityCash])
+  const movPaged = useLoadMore(movements)
 
   const emptyRates = React.useMemo(() => new Map<string, number>(), [])
-  const timeline = React.useMemo(
-    () =>
-      entity
-        ? buildPatrimonioTimeline({
-            entities: [entity],
-            cashTxs,
-            invTxs: investmentTxs,
-            base: entity.currency,
-            rateMap: emptyRates,
-          })
-        : [],
-    [entity, cashTxs, investmentTxs, emptyRates],
+  const revaluations = React.useMemo(() => {
+    const out: { at: number; delta: number }[] = []
+    for (const h of holdings) {
+      const a = assetMap.get(h.asset_id)
+      if (!a || a.manual_price == null) continue
+      const delta = h.quantity * a.manual_price - h.invested_amount
+      const at = a.manual_price_at
+        ? new Date(a.manual_price_at).getTime()
+        : Date.now()
+      out.push({ at, delta })
+    }
+    return out
+  }, [holdings, assetMap])
+  const markers = React.useMemo(
+    () => revaluations.map((r) => r.at),
+    [revaluations],
   )
+  const timeline = React.useMemo(() => {
+    if (!entity) return []
+    return buildPatrimonioTimeline({
+      entities: [entity],
+      cashTxs,
+      invTxs: investmentTxs,
+      base: entity.currency,
+      rateMap: emptyRates,
+      revaluations,
+    })
+  }, [entity, cashTxs, investmentTxs, emptyRates, revaluations])
   if (isLoading) {
     return (
       <>
@@ -145,6 +184,33 @@ export function EntityDetailPage() {
     return e.deleted_at ? `${e.name} · Eliminado` : e.name
   }
 
+  // Valoración estimada de las posiciones con el precio manual (si existe);
+  // las que no tienen precio se cuentan a coste. Alimenta el balance del bróker.
+  const investedCost = holdings.reduce((s, h) => s + h.invested_amount, 0)
+  const estimatedInv = holdings.reduce((s, h) => {
+    const p = assetMap.get(h.asset_id)?.manual_price
+    return s + (p != null ? h.quantity * p : h.invested_amount)
+  }, 0)
+  const hasPrices = holdings.some(
+    (h) => assetMap.get(h.asset_id)?.manual_price != null,
+  )
+  const latentPnl = estimatedInv - investedCost
+  const latentPct = investedCost > 0 ? (latentPnl / investedCost) * 100 : null
+  const costTotal = entity.cash_balance_cache + investedCost
+  const balanceTotal = entity.cash_balance_cache + estimatedInv
+
+  // Posiciones con precio manual, para el escenario "si vendieras hoy".
+  const latentPositions = holdings.flatMap((h) => {
+    const a = assetMap.get(h.asset_id)
+    if (!a || a.manual_price == null) return []
+    return [
+      {
+        symbol: a.symbol,
+        latent: h.quantity * a.manual_price - h.invested_amount,
+      },
+    ]
+  })
+
   return (
     <>
       <BackButton />
@@ -165,21 +231,46 @@ export function EntityDetailPage() {
                 />
               </span>
               <div className="min-w-0 flex-1">
-                <h1 className="text-2xl font-semibold tracking-tight">
+                <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
                   {entity.name}
                   {entity.deleted_at && (
-                    <span className="text-muted-foreground ml-2 text-sm font-normal">
+                    <span className="text-muted-foreground text-sm font-normal">
                       · Eliminado
                     </span>
                   )}
+                  <EditButton onClick={() => setEditOpen(true)} />
                 </h1>
                 <p className="text-muted-foreground text-sm">
                   {entity.type === 'BANK' ? 'Banco' : 'Bróker'} ·{' '}
                   {entity.currency}
                 </p>
                 <p className="mt-1 text-xl font-semibold tabular-nums">
-                  {formatMoney(entity.cash_balance_cache, entity.currency)}
+                  {formatMoney(balanceTotal, entity.currency)}
                 </p>
+                {isBroker && holdings.length > 0 && (
+                  <p className="text-muted-foreground mt-0.5 text-xs tabular-nums">
+                    Efectivo{' '}
+                    {formatMoney(entity.cash_balance_cache, entity.currency)} ·
+                    Invertido {formatMoney(estimatedInv, entity.currency)}
+                  </p>
+                )}
+                {isBroker && hasPrices && (
+                  <p className="mt-0.5 text-xs">
+                    <span className="text-muted-foreground">A coste </span>
+                    <span className="tabular-nums">
+                      {formatMoney(costTotal, entity.currency)}
+                    </span>
+                    <span className="text-muted-foreground"> · Plusvalía </span>
+                    <span
+                      className={`tabular-nums ${latentPnl >= 0 ? 'text-positive' : 'text-negative'}`}
+                    >
+                      {latentPnl >= 0 ? '+' : ''}
+                      {formatMoney(latentPnl, entity.currency)}
+                      {latentPct != null &&
+                        ` (${latentPnl >= 0 ? '+' : ''}${latentPct.toFixed(1)}%)`}
+                    </span>
+                  </p>
+                )}
               </div>
             </div>
             <div className="flex flex-wrap gap-2 sm:shrink-0">
@@ -194,78 +285,35 @@ export function EntityDetailPage() {
                   Análisis
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 sm:flex-none"
-                onClick={() => setEditOpen(true)}
-              >
-                <PencilIcon className="size-4" />
-                Editar
-              </Button>
+              {isBroker && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  onClick={() => setTaxOpen(true)}
+                >
+                  <ReceiptTextIcon className="size-4" />
+                  Impuestos
+                </Button>
+              )}
             </div>
           </div>
 
-          <GrowthChart points={timeline} base={entity.currency} />
+          <GrowthChart
+            points={timeline}
+            base={entity.currency}
+            markers={markers}
+          />
         </section>
 
         {isBroker && (
           <section className="space-y-4">
-            <h2 className="text-lg font-semibold tracking-tight">Posiciones</h2>
-            {holdings.length === 0 ? (
-              <div className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
-                Sin posiciones abiertas en este bróker.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {holdings.map((h) => {
-                  const asset = assetMap.get(h.asset_id)
-                  return (
-                    <Link
-                      key={h.id}
-                      to={`/holdings/${h.id}`}
-                      style={brandStyle(asset?.color ?? null)}
-                      className="bg-card hover:bg-muted/50 flex items-center gap-3 rounded-xl border p-4"
-                    >
-                      <BrandIcon
-                        name={asset?.symbol ?? '?'}
-                        domain={asset?.icon_domain ?? null}
-                        className={
-                          asset?.color
-                            ? 'bg-brand text-brand-foreground size-9'
-                            : 'size-9'
-                        }
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">
-                          {asset?.symbol ?? '—'}
-                          {asset?.deleted_at ? ' · Eliminado' : ''}
-                        </p>
-                        <p className="text-muted-foreground text-xs tabular-nums">
-                          {h.quantity} ·{' '}
-                          {formatMoney(h.average_price, entity.currency)}
-                        </p>
-                      </div>
-                      <div className="shrink-0 text-sm tabular-nums">
-                        {formatMoney(h.invested_amount, entity.currency)}
-                      </div>
-                    </Link>
-                  )
-                })}
-              </div>
-            )}
-          </section>
-        )}
-
-        {isBroker && (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="text-lg font-semibold tracking-tight">
-                Movimientos de inversión
+                Posiciones
               </h2>
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => setInvFormOpen(true)}
                 disabled={Boolean(entity.deleted_at)}
               >
@@ -273,13 +321,50 @@ export function EntityDetailPage() {
                 Operar
               </Button>
             </div>
-            {investmentTxs.length === 0 ? (
+            {holdings.length === 0 ? (
               <div className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
-                Sin compras ni ventas registradas.
+                Sin posiciones abiertas en este bróker.
               </div>
             ) : (
-              <div className="divide-y rounded-xl border">
-                {invPaged.visible.map((t) => {
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {holdings.map((h) => (
+                  <HoldingCard
+                    key={h.id}
+                    holding={h}
+                    asset={assetMap.get(h.asset_id)}
+                    subtitle={entity.name}
+                    currency={entity.currency}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Movimientos
+            </h2>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCashFormOpen(true)}
+              disabled={Boolean(entity.deleted_at)}
+            >
+              <ArrowRightLeftIcon className="size-4" />
+              Mover efectivo
+            </Button>
+          </div>
+          {movements.length === 0 ? (
+            <div className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
+              Sin movimientos registrados.
+            </div>
+          ) : (
+            <div className="divide-y rounded-xl border">
+              {movPaged.visible.map((m) => {
+                if (m.kind === 'inv') {
+                  const t = m.tx
                   const asset = assetMap.get(t.asset_id)
                   const isBuy = t.transaction_type === 'BUY'
                   const net = isBuy
@@ -287,7 +372,7 @@ export function EntityDetailPage() {
                     : t.gross_amount - t.fees - t.taxes
                   return (
                     <Link
-                      key={t.id}
+                      key={`inv-${t.id}`}
                       to={`/investments/${t.id}`}
                       className="hover:bg-muted/50 flex items-center gap-3 p-4"
                     >
@@ -312,40 +397,8 @@ export function EntityDetailPage() {
                       </div>
                     </Link>
                   )
-                })}
-                {invPaged.hasMore && (
-                  <LoadMoreButton
-                    remaining={invPaged.remaining}
-                    onClick={invPaged.showMore}
-                  />
-                )}
-              </div>
-            )}
-          </section>
-        )}
-
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold tracking-tight">
-              Movimientos de efectivo
-            </h2>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setCashFormOpen(true)}
-              disabled={Boolean(entity.deleted_at)}
-            >
-              <PlusIcon className="size-4" />
-              Añadir
-            </Button>
-          </div>
-          {entityCash.length === 0 ? (
-            <div className="text-muted-foreground rounded-xl border border-dashed p-8 text-center text-sm">
-              Sin movimientos de efectivo.
-            </div>
-          ) : (
-            <div className="divide-y rounded-xl border">
-              {cashPaged.visible.map((t) => {
+                }
+                const t = m.tx
                 const Icon = TYPE_ICON[t.transaction_type]
                 const incoming = t.to_entity_id === id
                 const showAmount =
@@ -373,7 +426,7 @@ export function EntityDetailPage() {
                     : CASH_TYPE_LABELS[t.transaction_type]
                 return (
                   <Link
-                    key={t.id}
+                    key={`cash-${t.id}`}
                     to={`/cash/${t.id}`}
                     className="hover:bg-muted/50 flex items-center gap-3 p-4"
                   >
@@ -396,10 +449,10 @@ export function EntityDetailPage() {
                   </Link>
                 )
               })}
-              {cashPaged.hasMore && (
+              {movPaged.hasMore && (
                 <LoadMoreButton
-                  remaining={cashPaged.remaining}
-                  onClick={cashPaged.showMore}
+                  remaining={movPaged.remaining}
+                  onClick={movPaged.showMore}
                 />
               )}
             </div>
@@ -439,11 +492,11 @@ export function EntityDetailPage() {
 
       {isBroker && (
         <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
-          <DialogContent>
+          <DialogContent className="flex max-h-[85vh] flex-col">
             <DialogHeader>
               <DialogTitle>Análisis de {entity.name}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-6">
+            <div className="-mr-2 space-y-6 overflow-y-auto pr-2">
               <div>
                 <p className="text-muted-foreground mb-3 text-xs">
                   Rentabilidad realizada
@@ -453,6 +506,53 @@ export function EntityDetailPage() {
                   base={entity.currency}
                 />
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {isBroker && (
+        <Dialog open={taxOpen} onOpenChange={setTaxOpen}>
+          <DialogContent className="flex max-h-[85vh] flex-col">
+            <DialogHeader>
+              <DialogTitle>Impuestos de {entity.name}</DialogTitle>
+            </DialogHeader>
+            <div className="flex gap-1">
+              {(
+                [
+                  { key: 'today', label: 'Si vendieras hoy' },
+                  { key: 'realized', label: 'Realizado' },
+                ] as const
+              ).map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => setTaxView(v.key)}
+                  className={
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors ' +
+                    (taxView === v.key
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/50')
+                  }
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+            <div className="-mr-2 overflow-y-auto pr-2">
+              {taxView === 'today' ? (
+                <LatentTaxPanel
+                  positions={latentPositions}
+                  currency={entity.currency}
+                  defaultRegime={profile?.tax_regime ?? 'ES'}
+                />
+              ) : (
+                <TaxAnalysisPanel
+                  invTxs={investmentTxs}
+                  currency={entity.currency}
+                  defaultRegime={profile?.tax_regime ?? 'ES'}
+                />
+              )}
             </div>
           </DialogContent>
         </Dialog>

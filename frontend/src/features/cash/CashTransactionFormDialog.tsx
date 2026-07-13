@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { formatMoney } from '@/lib/currencies'
@@ -101,7 +102,7 @@ export function CashTransactionFormDialog({
     const t = transaction?.transaction_type ?? 'DEPOSIT'
     setType(t)
     const defEnt = transaction ? '' : (defaultEntityId ?? '')
-    setFromId(transaction?.from_entity_id ?? '')
+    setFromId(transaction?.from_entity_id ?? defEnt)
     setToId(transaction?.to_entity_id ?? defEnt)
     if (t === 'ADJUSTMENT') {
       if (transaction?.to_entity_id) {
@@ -157,6 +158,9 @@ export function CashTransactionFormDialog({
 
   const isPending = createMutation.isPending || updateMutation.isPending
   const hasEntities = entities.length >= 1
+  // Al abrir desde una entidad concreta (banco o bróker), fijamos la entidad en
+  // ingreso/retirada/ajuste (no en traspaso, que necesita dos entidades).
+  const lockEntity = !isEdit && Boolean(defaultEntityId)
 
   function resolveCurrency(): string | null {
     if (type === 'DEPOSIT') return entityMap.get(toId)?.currency ?? null
@@ -169,6 +173,8 @@ export function CashTransactionFormDialog({
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault()
     setErrorMsg(null)
+
+    if (!executedAt) return setErrorMsg('Indica la fecha del movimiento.')
 
     let fromEntityId: string | null = null
     let toEntityId: string | null = null
@@ -404,6 +410,7 @@ export function CashTransactionFormDialog({
               entities={entities}
               value={toId}
               onChange={setToId}
+              disabled={lockEntity}
             />
           )}
 
@@ -413,6 +420,7 @@ export function CashTransactionFormDialog({
               entities={entities}
               value={fromId}
               onChange={setFromId}
+              disabled={lockEntity}
             />
           )}
 
@@ -423,6 +431,7 @@ export function CashTransactionFormDialog({
                 entities={entities}
                 value={adjustId}
                 onChange={setAdjustId}
+                disabled={lockEntity}
               />
               {adjustId && (
                 <p className="text-muted-foreground text-xs">
@@ -473,11 +482,10 @@ export function CashTransactionFormDialog({
             )}
             <div className="space-y-2">
               <Label htmlFor="cash-date">Fecha</Label>
-              <Input
+              <DateInput
                 id="cash-date"
-                type="date"
                 value={executedAt}
-                onChange={(e) => setExecutedAt(e.target.value)}
+                onChange={setExecutedAt}
               />
             </div>
           </div>
@@ -553,16 +561,18 @@ function EntitySelect({
   entities,
   value,
   onChange,
+  disabled,
 }: {
   label: string
   entities: Entity[]
   value: string
   onChange: (value: string) => void
+  disabled?: boolean
 }) {
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <Select value={value} onValueChange={onChange}>
+      <Select value={value} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger>
           <SelectValue placeholder="Selecciona…" />
         </SelectTrigger>

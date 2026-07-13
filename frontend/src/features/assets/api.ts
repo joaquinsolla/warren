@@ -94,3 +94,25 @@ export async function deleteAsset(id: string): Promise<void> {
     .eq('id', id)
   if (error) throw error
 }
+
+/**
+ * Actualiza el precio manual (estimación) de un activo. Al fijar un precio se
+ * guarda también la fecha; pasar null lo borra. No toca el histórico ni el
+ * patrimonio a coste, solo la vista de valor estimado.
+ */
+export async function updateAssetPrice(
+  id: string,
+  price: number | null,
+): Promise<Asset> {
+  const { data, error } = await supabase
+    .from('assets')
+    .update({
+      manual_price: price,
+      manual_price_at: price === null ? null : new Date().toISOString(),
+    })
+    .eq('id', id)
+    .select()
+    .single()
+  if (error) throw error
+  return data
+}

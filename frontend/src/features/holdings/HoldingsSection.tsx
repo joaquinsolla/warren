@@ -1,11 +1,8 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
-import { BrandIcon } from '@/components/BrandIcon'
-import { brandStyle } from '@/lib/brand'
-import { formatMoney } from '@/lib/currencies'
 import { useEntities } from '@/features/entities/hooks'
 import { useAllAssets } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
+import { HoldingCard } from '@/features/holdings/HoldingCard'
 
 export function HoldingsSection({ portfolioId }: { portfolioId: string }) {
   const { data: entities = [] } = useEntities(portfolioId)
@@ -51,51 +48,13 @@ export function HoldingsSection({ portfolioId }: { portfolioId: string }) {
           const entity = entityMap.get(h.entity_id)
           const currency = entity?.currency ?? 'EUR'
           return (
-            <Link
+            <HoldingCard
               key={h.id}
-              to={`/holdings/${h.id}`}
-              style={brandStyle(asset?.color ?? null)}
-              className="bg-card hover:bg-muted/50 block space-y-3 rounded-xl border p-4"
-            >
-              <div className="flex items-center gap-3">
-                <BrandIcon
-                  name={asset?.symbol ?? '?'}
-                  domain={asset?.icon_domain ?? null}
-                  className={
-                    asset?.color
-                      ? 'bg-brand text-brand-foreground size-9'
-                      : 'size-9'
-                  }
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">
-                    {asset?.symbol ?? '—'}
-                    {asset?.deleted_at ? ' · Eliminado' : ''}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {entity?.name ?? '—'}
-                  </p>
-                </div>
-              </div>
-              <dl className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Cantidad</dt>
-                  <dd className="tabular-nums">{h.quantity}</dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Precio medio</dt>
-                  <dd className="tabular-nums">
-                    {formatMoney(h.average_price, currency)}
-                  </dd>
-                </div>
-                <div className="flex justify-between">
-                  <dt className="text-muted-foreground">Invertido</dt>
-                  <dd className="tabular-nums">
-                    {formatMoney(h.invested_amount, currency)}
-                  </dd>
-                </div>
-              </dl>
-            </Link>
+              holding={h}
+              asset={asset}
+              subtitle={entity?.name ?? '—'}
+              currency={currency}
+            />
           )
         })}
       </div>

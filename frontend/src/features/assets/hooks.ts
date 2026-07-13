@@ -5,6 +5,7 @@ import {
   getAssetById,
   listAssets,
   updateAsset,
+  updateAssetPrice,
   type AssetFormValues,
 } from '@/features/assets/api'
 
@@ -64,6 +65,19 @@ export function useDeleteAsset() {
     mutationFn: (id: string) => deleteAsset(id),
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: assetsKey })
+      queryClient.invalidateQueries({ queryKey: assetKey(id) })
+    },
+  })
+}
+
+export function useUpdateAssetPrice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, price }: { id: string; price: number | null }) =>
+      updateAssetPrice(id, price),
+    onSuccess: (_data, { id }) => {
+      queryClient.invalidateQueries({ queryKey: assetsKey })
+      queryClient.invalidateQueries({ queryKey: allAssetsKey })
       queryClient.invalidateQueries({ queryKey: assetKey(id) })
     },
   })

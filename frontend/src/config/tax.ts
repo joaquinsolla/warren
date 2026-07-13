@@ -23,6 +23,12 @@ export interface TaxRegime {
   taxFreeAllowance?: number
   /** Tramos progresivos. Un único tramo con upTo=null equivale a tipo fijo. */
   brackets: TaxBracket[]
+  /**
+   * Mes (1-12) en el que empieza el año fiscal. Por defecto 1 (enero), es decir
+   * el año fiscal coincide con el natural. Solo difiere en países como Reino
+   * Unido (abril, aprox.).
+   */
+  fiscalYearStartMonth?: number
   /** Aclaración cuando el modelo es una aproximación (renta, tenencia, etc.). */
   note?: string
 }
@@ -135,8 +141,9 @@ export const TAX_REGIMES: Record<string, TaxRegime> = {
     label: 'Reino Unido',
     currency: 'GBP',
     taxFreeAllowance: 3000,
+    fiscalYearStartMonth: 4,
     brackets: [{ upTo: null, rate: 0.24 }],
-    note: 'Aprox. tipo alto 24% con exención de 3.000£. El tipo real (18%/24%) depende de tu renta.',
+    note: 'Aprox. tipo alto 24% con exención de 3.000£. El año fiscal británico va de abril a abril (aquí aproximado). El tipo real (18%/24%) depende de tu renta.',
   },
   CA: {
     label: 'Canadá',

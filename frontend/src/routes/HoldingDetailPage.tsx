@@ -24,6 +24,8 @@ const dateFmt = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
 })
 
 export function HoldingDetailPage() {
@@ -66,6 +68,13 @@ export function HoldingDetailPage() {
   }
 
   const currency = entity?.currency ?? asset?.currency ?? 'EUR'
+  const price = asset?.manual_price ?? null
+  const estValue = price != null ? holding.quantity * price : null
+  const pnl = estValue != null ? estValue - holding.invested_amount : null
+  const pnlPct =
+    pnl != null && holding.invested_amount > 0
+      ? (pnl / holding.invested_amount) * 100
+      : null
 
   return (
     <>
@@ -109,20 +118,38 @@ export function HoldingDetailPage() {
               )}
             </p>
           </div>
-          <Button size="sm" variant="outline" onClick={() => setFormOpen(true)}>
+          <Button size="sm" onClick={() => setFormOpen(true)}>
             <PlusIcon className="size-4" />
             Operar
           </Button>
         </div>
 
         <dl className="bg-card rounded-xl border p-4">
-          <Field label="Cantidad">{holding.quantity}</Field>
-          <Field label="Precio medio">
-            {formatMoney(holding.average_price, currency)}
-          </Field>
+          <Field label="Acciones">{holding.quantity}</Field>
           <Field label="Invertido (coste)">
             {formatMoney(holding.invested_amount, currency)}
           </Field>
+          <Field label="Precio medio">
+            {formatMoney(holding.average_price, currency)}
+          </Field>
+          {price != null && (
+            <>
+              <Field label="Precio actual">
+                {formatMoney(price, currency)}
+              </Field>
+              <Field label="Valor estimado">
+                {formatMoney(estValue!, currency)}
+              </Field>
+              <Field label="Plusvalía latente">
+                <span className={pnl! >= 0 ? 'text-positive' : 'text-negative'}>
+                  {pnl! >= 0 ? '+' : ''}
+                  {formatMoney(pnl!, currency)}
+                  {pnlPct != null &&
+                    ` (${pnl! >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`}
+                </span>
+              </Field>
+            </>
+          )}
         </dl>
 
         {portfolioId && (

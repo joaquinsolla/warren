@@ -599,6 +599,26 @@ abiertas se valoran a coste (resultado 0) hasta que exista cotización.
 
 Limitación actual: la operación se registra en la moneda de la entidad (bróker).
 
+**Precios manuales (estimación).** Como no hay fuente de precios en vivo, cada
+activo tiene un `manual_price` opcional (con `manual_price_at`) que el usuario
+edita a mano para estimar su valor de mercado y **plusvalía latente**
+(`valor = quantity × manual_price`, `plusvalía = valor − invertido`) sin
+registrar ninguna venta. Es un caché editable (no reconstruible desde el
+histórico), no afecta al patrimonio a coste ni a las operaciones. Se introduce
+símbolo a símbolo (página del activo) o en bloque desde el diálogo "Actualizar
+precios" del dashboard (guardado por símbolo, estilo tipos de cambio). El
+resumen muestra el valor estimado y la plusvalía latente cuando hay algún precio.
+
+**Análisis de impuestos (estimación).** Cada bróker incluye, en su diálogo de
+análisis, una estimación del **impuesto de plusvalías** sobre las ganancias
+realizadas por FIFO, año a año. Usa los regímenes de `src/config/tax.ts`
+(`estimateCapitalGainsTax`), con un selector de país (por defecto el
+`profiles.tax_regime`) y toggle **año natural / año fiscal** (el año fiscal solo
+difiere donde `fiscalYearStartMonth ≠ 1`, p. ej. Reino Unido). La tabla muestra
+ganancia neta, impuesto y tipo efectivo por periodo más una fila **Total (máx)**.
+Es solo estimación: **no** se aplica al balance ni se persiste, y las pérdidas de
+un año no compensan otros años en este cálculo.
+
 ---
 
 # Tabla: investment_objectives

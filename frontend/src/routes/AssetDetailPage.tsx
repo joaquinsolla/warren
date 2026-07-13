@@ -1,22 +1,30 @@
 import * as React from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { PencilIcon, PlusIcon } from 'lucide-react'
+import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
-import { formatMoney } from '@/lib/currencies'
+import { formatMoney, getCurrency } from '@/lib/currencies'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
-import { assetKey, useAsset } from '@/features/assets/hooks'
+import {
+  assetKey,
+  useAsset,
+  useUpdateAssetPrice,
+} from '@/features/assets/hooks'
 import { AssetFormDialog } from '@/features/assets/AssetFormDialog'
 import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
 import { ASSET_TYPE_LABELS } from '@/features/assets/labels'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useEntities } from '@/features/entities/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
+import { HoldingCard } from '@/features/holdings/HoldingCard'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
-import { ObjectivesList } from '@/features/objectives/ObjectivesList'
+import { Link } from 'react-router-dom'
 import {
   BackButton,
+  EditButton,
   Field,
   LoadMoreButton,
   NotFound,
@@ -27,6 +35,8 @@ const dateFmt = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
   month: 'short',
   year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
 })
 
 export function AssetDetailPage() {
@@ -50,6 +60,34 @@ export function AssetDetailPage() {
 
   const [editOpen, setEditOpen] = React.useState(false)
   const [investOpen, setInvestOpen] = React.useState(false)
+  const updatePrice = useUpdateAssetPrice()
+  const [priceDraft, setPriceDraft] = React.useState('')
+  const [priceMsg, setPriceMsg] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    setPriceDraft(asset?.manual_price != null ? String(asset.manual_price) : '')
+    setPriceMsg(null)
+  }, [asset?.id, asset?.manual_price])
+
+  async function savePrice() {
+    if (!asset) return
+    setPriceMsg(null)
+    const raw = priceDraft.trim()
+    if (raw === '') {
+      await updatePrice.mutateAsync({ id: asset.id, price: null })
+      return
+    }
+    const v = Number(raw)
+    if (!Number.isFinite(v) || v < 0) {
+      setPriceMsg('Introduce un precio válido.')
+      return
+    }
+    try {
+      await updatePrice.mutateAsync({ id: asset.id, price: v })
+    } catch (err) {
+      setPriceMsg((err as Error).message)
+    }
+  }
 
   function refresh(open: boolean) {
     if (!open && id) {
@@ -97,13 +135,17 @@ export function AssetDetailPage() {
             />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               {asset.symbol}
               {asset.deleted_at && (
-                <span className="text-muted-foreground ml-2 text-sm font-normal">
+                <span className="text-muted-foreground text-sm font-normal">
                   · Eliminado
                 </span>
               )}
+              <EditButton
+                onClick={() => setEditOpen(true)}
+                disabled={Boolean(asset.deleted_at)}
+              />
             </h1>
             <p className="text-muted-foreground text-sm">{asset.name}</p>
           </div>
@@ -116,16 +158,46 @@ export function AssetDetailPage() {
               <PlusIcon className="size-4" />
               Operar
             </Button>
+          </div>
+        </div>
+
+        <div className="bg-card space-y-2 rounded-xl border p-4">
+          <Label htmlFor="asset-price">Precio actual</Label>
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <span className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm">
+                {getCurrency(asset.currency)?.symbol ?? asset.currency}
+              </span>
+              <Input
+                id="asset-price"
+                type="number"
+                inputMode="decimal"
+                min="0"
+                step="any"
+                className="pl-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                value={priceDraft}
+                onChange={(e) => setPriceDraft(e.target.value)}
+                placeholder="Sin precio"
+                disabled={Boolean(asset.deleted_at)}
+              />
+            </div>
             <Button
+              type="button"
               variant="outline"
-              size="sm"
-              onClick={() => setEditOpen(true)}
-              disabled={Boolean(asset.deleted_at)}
+              onClick={savePrice}
+              disabled={updatePrice.isPending || Boolean(asset.deleted_at)}
             >
-              <PencilIcon className="size-4" />
-              Editar
+              Guardar
             </Button>
           </div>
+          {priceMsg ? (
+            <p className="text-destructive text-xs">{priceMsg}</p>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Se usa solo para estimar tu valor de mercado y plusvalía; no crea
+              operaciones.
+            </p>
+          )}
         </div>
 
         <dl className="bg-card rounded-xl border p-4">
@@ -146,44 +218,23 @@ export function AssetDetailPage() {
               No tienes posiciones abiertas de este activo.
             </div>
           ) : (
-            <div className="divide-y rounded-xl border">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {assetHoldings.map((h) => {
                 const entity = entityMap.get(h.entity_id)
                 const currency = entity?.currency ?? asset.currency
                 return (
-                  <Link
+                  <HoldingCard
                     key={h.id}
-                    to={`/holdings/${h.id}`}
-                    className="hover:bg-muted/50 flex items-center gap-3 p-4"
-                  >
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">
-                        {entity?.name ?? '—'}
-                      </p>
-                      <p className="text-muted-foreground text-xs tabular-nums">
-                        {h.quantity} · medio{' '}
-                        {formatMoney(h.average_price, currency)}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-sm tabular-nums">
-                      {formatMoney(h.invested_amount, currency)}
-                    </div>
-                  </Link>
+                    holding={h}
+                    asset={asset}
+                    subtitle={entity?.name ?? '—'}
+                    currency={currency}
+                  />
                 )
               })}
             </div>
           )}
         </section>
-
-        {portfolioId && (
-          <ObjectivesList
-            portfolioId={portfolioId}
-            assetId={asset.id}
-            entityId={null}
-            scope="asset"
-            currency={asset.currency}
-          />
-        )}
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight">

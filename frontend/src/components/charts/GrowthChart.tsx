@@ -26,12 +26,22 @@ const dateFmt = new Intl.DateTimeFormat('es-ES', {
   year: 'numeric',
 })
 
+const dateTimeFmt = new Intl.DateTimeFormat('es-ES', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
+
 export function GrowthChart({
   points,
   base,
+  markers,
 }: {
   points: TimelinePoint[]
   base: string
+  markers?: number[]
 }) {
   const [range, setRange] = React.useState<RangeKey>('MAX')
   const [ref, width] = useElementWidth<HTMLDivElement>()
@@ -43,19 +53,22 @@ export function GrowthChart({
   const series = React.useMemo(() => {
     if (points.length === 0) return [] as TimelinePoint[]
     const cfg = RANGES.find((r) => r.key === range)!
-    const start = cfg.ms === Infinity ? points[0].t : now - cfg.ms
+    // Fin de ventana: nunca antes del último punto real (evita descartar el
+    // estado actual si su marca de tiempo va ligeramente por delante de `now`).
+    const end = Math.max(now, points[points.length - 1].t)
+    const start = cfg.ms === Infinity ? points[0].t : end - cfg.ms
     // Valor de arranque = último punto anterior al inicio de la ventana.
     let baseline = points[0].value
     for (const p of points) {
       if (p.t <= start) baseline = p.value
       else break
     }
-    const inWindow = points.filter((p) => p.t > start && p.t <= now)
+    const inWindow = points.filter((p) => p.t > start && p.t <= end)
     const result: TimelinePoint[] = [{ t: start, value: baseline }]
     for (const p of inWindow) result.push(p)
     const lastValue = result[result.length - 1].value
-    if (result[result.length - 1].t < now) {
-      result.push({ t: now, value: lastValue })
+    if (result[result.length - 1].t < end) {
+      result.push({ t: end, value: lastValue })
     }
     return result
   }, [points, range, now])
@@ -102,20 +115,46 @@ export function GrowthChart({
 
   const first = series[0].value
   const last = series[series.length - 1].value
+  const lastPoint = series[series.length - 1]
   const up = last >= first
   const color = up ? 'var(--positive)' : 'var(--negative)'
   const delta = last - first
   const pct = first !== 0 ? (delta / Math.abs(first)) * 100 : 0
 
+  // Marcadores (p. ej. ajustes de precio): posiciona cada uno sobre la serie
+  // buscando el punto con la marca de tiempo más cercana dentro de la ventana.
+  const markerPoints: TimelinePoint[] = []
+  for (const m of markers ?? []) {
+    if (m < minT || m > maxT) continue
+    let best = series[0]
+    let bestD = Infinity
+    for (const p of series) {
+      const d = Math.abs(p.t - m)
+      if (d <= bestD) {
+        bestD = d
+        best = p
+      }
+    }
+    markerPoints.push(best)
+  }
+
   function onMove(e: React.PointerEvent<SVGSVGElement>) {
     const rect = e.currentTarget.getBoundingClientRect()
     const frac = (e.clientX - rect.left) / rect.width
+    // Zona derecha: fuerza el estado actual (los ajustes de precio se comprimen
+    // en pocos píxeles y de otro modo serían inalcanzables).
+    if (frac >= 0.985) {
+      setHover(series.length - 1)
+      return
+    }
     const t = minT + frac * spanT
     let nearest = 0
     let best = Infinity
     for (let i = 0; i < series.length; i++) {
       const d = Math.abs(series[i].t - t)
-      if (d < best) {
+      // <= : ante empates (p. ej. ancla y salto de revaluación en el mismo
+      // píxel) gana el punto posterior, que refleja el estado actual.
+      if (d <= best) {
         best = d
         nearest = i
       }
@@ -124,6 +163,14 @@ export function GrowthChart({
   }
 
   const hoverPoint = hover !== null ? series[hover] : null
+  const hoverLeftPct = hoverPoint !== null ? (x(hoverPoint.t) / w) * 100 : 0
+  // Evita que el tooltip/punto se salga por los bordes del contenedor.
+  const tipTransform =
+    hoverLeftPct > 85
+      ? 'translateX(-100%)'
+      : hoverLeftPct < 15
+        ? 'translateX(0)'
+        : 'translateX(-50%)'
 
   return (
     <div className="space-y-3">
@@ -202,6 +249,28 @@ export function GrowthChart({
               vectorEffect="non-scaling-stroke"
             />
           )}
+          {markerPoints.map((p, i) => (
+            <circle
+              key={i}
+              cx={x(p.t)}
+              cy={y(p.value)}
+              r={3}
+              fill="var(--background)"
+              stroke={color}
+              strokeWidth={2}
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+          {/* Punto permanente: estado actual (último valor de la serie). */}
+          <circle
+            cx={x(lastPoint.t)}
+            cy={y(lastPoint.value)}
+            r={4}
+            fill={color}
+            stroke="var(--background)"
+            strokeWidth={2}
+            vectorEffect="non-scaling-stroke"
+          />
         </svg>
 
         {hoverPoint && (
@@ -220,15 +289,15 @@ export function GrowthChart({
           <div
             className="bg-popover text-popover-foreground pointer-events-none absolute top-0 z-10 rounded-md border px-2 py-1 text-xs shadow-sm"
             style={{
-              left: `${(x(hoverPoint.t) / w) * 100}%`,
-              transform: 'translateX(-50%)',
+              left: `${hoverLeftPct}%`,
+              transform: tipTransform,
             }}
           >
             <span className="font-medium tabular-nums">
               {formatMoney(hoverPoint.value, base)}
             </span>
             <span className="text-muted-foreground ml-1">
-              {dateFmt.format(new Date(hoverPoint.t))}
+              {dateTimeFmt.format(new Date(hoverPoint.t))}
             </span>
           </div>
         )}

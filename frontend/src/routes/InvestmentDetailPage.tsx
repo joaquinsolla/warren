@@ -1,8 +1,6 @@
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { PencilIcon } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
 import { formatMoney } from '@/lib/currencies'
@@ -14,7 +12,12 @@ import {
   useInvestmentTransaction,
 } from '@/features/investments/hooks'
 import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
-import { BackButton, Field, NotFound } from '@/routes/detail/detailShared'
+import {
+  BackButton,
+  EditButton,
+  Field,
+  NotFound,
+} from '@/routes/detail/detailShared'
 
 const dateTimeFmt = new Intl.DateTimeFormat('es-ES', {
   day: '2-digit',
@@ -82,13 +85,14 @@ export function InvestmentDetailPage() {
             />
           </span>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
               {isBuy ? 'Compra' : 'Venta'} · {asset?.symbol ?? '—'}
               {asset?.deleted_at && (
-                <span className="text-muted-foreground ml-2 text-sm font-normal">
+                <span className="text-muted-foreground text-sm font-normal">
                   · Eliminado
                 </span>
               )}
+              <EditButton onClick={() => setEditOpen(true)} />
             </h1>
             <p className="text-muted-foreground text-sm">
               {asset ? (
@@ -99,16 +103,6 @@ export function InvestmentDetailPage() {
                 '—'
               )}
             </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditOpen(true)}
-            >
-              <PencilIcon className="size-4" />
-              Editar
-            </Button>
           </div>
         </div>
 
@@ -124,7 +118,7 @@ export function InvestmentDetailPage() {
               '—'
             )}
           </Field>
-          <Field label="Cantidad">{tx.quantity}</Field>
+          <Field label="Acciones">{tx.quantity}</Field>
           <Field label="Precio unitario">
             {formatMoney(tx.price_per_unit, tx.currency)}
           </Field>
@@ -137,7 +131,7 @@ export function InvestmentDetailPage() {
             {formatMoney(net, tx.currency)}
           </Field>
           {tx.remaining_quantity != null && isBuy && (
-            <Field label="Cantidad pendiente (FIFO)">
+            <Field label="Acciones pendientes (FIFO)">
               {tx.remaining_quantity}
             </Field>
           )}

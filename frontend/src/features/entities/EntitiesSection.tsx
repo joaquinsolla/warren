@@ -10,8 +10,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
-import { formatMoney, getCurrency } from '@/lib/currencies'
+import { formatMoney } from '@/lib/currencies'
 import { useEntities } from '@/features/entities/hooks'
+import { useHoldings } from '@/features/holdings/hooks'
+import { useAllAssets } from '@/features/assets/hooks'
 import { EntityFormDialog } from '@/features/entities/EntityFormDialog'
 import type { Entity } from '@/features/entities/api'
 
@@ -24,6 +26,22 @@ const TYPE_ORDER: Entity['type'][] = ['BANK', 'BROKER']
 
 export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
   const { data: entities = [], isLoading, error } = useEntities(portfolioId)
+  const entityIds = React.useMemo(() => entities.map((e) => e.id), [entities])
+  const { data: holdings = [] } = useHoldings(portfolioId, entityIds)
+  const { data: assets = [] } = useAllAssets()
+
+  // Valor estimado de las inversiones por entidad (precio manual donde exista,
+  // coste si no), para que el balance de la tarjeta refleje los ajustes.
+  const estInvByEntity = React.useMemo(() => {
+    const priceMap = new Map(assets.map((a) => [a.id, a.manual_price]))
+    const m = new Map<string, number>()
+    for (const h of holdings) {
+      const price = priceMap.get(h.asset_id)
+      const value = price != null ? h.quantity * price : h.invested_amount
+      m.set(h.entity_id, (m.get(h.entity_id) ?? 0) + value)
+    }
+    return m
+  }, [holdings, assets])
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Entity | null>(null)
@@ -79,6 +97,7 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
               <EntityCard
                 key={entity.id}
                 entity={entity}
+                investedValue={estInvByEntity.get(entity.id) ?? 0}
                 onEdit={() => openEdit(entity)}
               />
             ))}
@@ -98,13 +117,15 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
 
 function EntityCard({
   entity,
+  investedValue,
   onEdit,
 }: {
   entity: Entity
+  investedValue: number
   onEdit: () => void
 }) {
-  const currency = getCurrency(entity.currency)
   const navigate = useNavigate()
+  const balance = entity.cash_balance_cache + investedValue
 
   return (
     <div
@@ -127,8 +148,7 @@ function EntityCard({
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{entity.name}</p>
         <p className="text-muted-foreground text-xs tabular-nums">
-          {formatMoney(entity.cash_balance_cache, entity.currency)}
-          {currency ? ` · ${currency.code}` : ''}
+          {formatMoney(balance, entity.currency)}
         </p>
       </div>
       <DropdownMenu>

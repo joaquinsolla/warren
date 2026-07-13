@@ -6,22 +6,6 @@ import { useObjectives } from '@/features/objectives/hooks'
 import { ObjectiveFormDialog } from '@/features/objectives/ObjectiveFormDialog'
 import type { InvestmentObjective } from '@/features/objectives/api'
 
-const dateFmt = new Intl.DateTimeFormat('es-ES', {
-  day: '2-digit',
-  month: 'short',
-  year: 'numeric',
-})
-
-function dateStatus(target: string): { label: string; className: string } {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const d = new Date(`${target}T00:00:00`)
-  const days = Math.round((d.getTime() - today.getTime()) / 86_400_000)
-  if (days < 0) return { label: 'Fecha vencida', className: 'text-negative' }
-  if (days === 0) return { label: 'Vence hoy', className: 'text-negative' }
-  return { label: `Quedan ${days} días`, className: 'text-muted-foreground' }
-}
-
 type ObjectivesListProps = {
   portfolioId: string
   assetId: string
@@ -58,9 +42,6 @@ export function ObjectivesList({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Objetivos</h2>
-          <p className="text-muted-foreground text-xs">
-            Tu tesis: estrategia, precio y/o fecha. El estado se deriva.
-          </p>
         </div>
         <Button
           size="sm"
@@ -88,22 +69,13 @@ export function ObjectivesList({
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 {o.target_body && <p className="text-sm">{o.target_body}</p>}
-                <div className="text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 text-xs">
-                  {o.target_price != null && (
+                {o.target_price != null && (
+                  <div className="text-muted-foreground text-xs">
                     <span className="tabular-nums">
                       Objetivo: {formatMoney(o.target_price, currency)}
                     </span>
-                  )}
-                  {o.target_date && (
-                    <span className={dateStatus(o.target_date).className}>
-                      {dateFmt.format(new Date(`${o.target_date}T00:00:00`))} ·{' '}
-                      {dateStatus(o.target_date).label}
-                    </span>
-                  )}
-                  {!o.is_active && (
-                    <span className="text-muted-foreground">Pausado</span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button

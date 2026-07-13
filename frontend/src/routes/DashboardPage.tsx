@@ -31,18 +31,11 @@ export function DashboardPage() {
 
       {!isLoading && !error && currentPortfolio && (
         <section className="space-y-8">
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {currentPortfolio.name}
-            </h1>
-            {currentPortfolio.description && (
-              <p className="text-muted-foreground">
-                {currentPortfolio.description}
-              </p>
-            )}
-          </div>
-
-          <PortfolioSummary portfolioId={currentPortfolio.id} />
+          <PortfolioSummary
+            portfolioId={currentPortfolio.id}
+            title={currentPortfolio.name}
+            description={currentPortfolio.description}
+          />
           <EntitiesSection portfolioId={currentPortfolio.id} />
           <HoldingsSection portfolioId={currentPortfolio.id} />
 

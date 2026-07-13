@@ -1,5 +1,10 @@
 import * as React from 'react'
-import { ChartPieIcon, SettingsIcon, TriangleAlertIcon } from 'lucide-react'
+import {
+  ChartPieIcon,
+  RefreshCwIcon,
+  SettingsIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -8,14 +13,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatMoney } from '@/lib/currencies'
-import { buildRateMap, sumToBase } from '@/lib/fx'
+import { buildRateMap, convertToBase, sumToBase } from '@/lib/fx'
 import { useProfile } from '@/features/profile/hooks'
 import { useEntities } from '@/features/entities/hooks'
+import { useAllAssets } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
 import { useCashTransactions } from '@/features/cash/hooks'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
 import { useFxRates } from '@/features/fx/hooks'
 import { FxRatesDialog } from '@/features/fx/FxRatesDialog'
+import { PriceUpdateDialog } from '@/features/assets/PriceUpdateDialog'
 import {
   buildDistribution,
   buildPatrimonioTimeline,
@@ -37,12 +44,21 @@ const FALLBACK_PALETTE = [
   '#64748b',
 ]
 
-export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
+export function PortfolioSummary({
+  portfolioId,
+  title,
+  description,
+}: {
+  portfolioId: string
+  title: string
+  description?: string | null
+}) {
   const { data: profile } = useProfile()
   const base = profile?.base_currency ?? 'EUR'
   const { data: entities = [] } = useEntities(portfolioId)
   const entityIds = React.useMemo(() => entities.map((e) => e.id), [entities])
   const { data: holdings = [] } = useHoldings(portfolioId, entityIds)
+  const { data: assets = [] } = useAllAssets()
   const { data: cashTxs = [] } = useCashTransactions(portfolioId)
   const { data: invTxs = [] } = useInvestmentTransactions(
     portfolioId,
@@ -52,6 +68,7 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
 
   const [ratesOpen, setRatesOpen] = React.useState(false)
   const [analysisOpen, setAnalysisOpen] = React.useState(false)
+  const [pricesOpen, setPricesOpen] = React.useState(false)
 
   const entityMap = React.useMemo(
     () => new Map(entities.map((e) => [e.id, e])),
@@ -86,8 +103,46 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
     rateMap,
   )
 
-  const total = cash.total + invested.total
   const missing = [...new Set([...cash.missing, ...invested.missing])]
+
+  const priceMap = React.useMemo(
+    () => new Map(assets.map((a) => [a.id, a.manual_price])),
+    [assets],
+  )
+  // Valor estimado de las inversiones: usa el precio manual donde exista y el
+  // coste en las posiciones sin precio, para no infravalorar el total.
+  const estimatedInv = sumToBase(
+    holdings.map((h) => {
+      const price = priceMap.get(h.asset_id)
+      return {
+        amount: price != null ? h.quantity * price : h.invested_amount,
+        currency: entityMap.get(h.entity_id)?.currency ?? base,
+      }
+    }),
+    base,
+    rateMap,
+  )
+  const estimatedTotal = cash.total + estimatedInv.total
+
+  // Revaluaciones por posición (una por holding con precio manual), en base y
+  // en el instante del ajuste, para dibujar un escalón por cada cambio.
+  const revaluations = React.useMemo(() => {
+    const assetMap = new Map(assets.map((a) => [a.id, a]))
+    const out: { at: number; delta: number }[] = []
+    for (const h of holdings) {
+      const a = assetMap.get(h.asset_id)
+      if (!a || a.manual_price == null) continue
+      const cur = entityMap.get(h.entity_id)?.currency ?? base
+      const deltaLocal = h.quantity * a.manual_price - h.invested_amount
+      const delta = convertToBase(deltaLocal, cur, base, rateMap)
+      if (delta === null) continue
+      const at = a.manual_price_at
+        ? new Date(a.manual_price_at).getTime()
+        : Date.now()
+      out.push({ at, delta })
+    }
+    return out
+  }, [assets, holdings, entityMap, base, rateMap])
 
   const neededCurrencies = React.useMemo(
     () => [...new Set(entities.map((e) => e.currency))],
@@ -95,8 +150,21 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
   )
 
   const timeline = React.useMemo(
-    () => buildPatrimonioTimeline({ entities, cashTxs, invTxs, base, rateMap }),
-    [entities, cashTxs, invTxs, base, rateMap],
+    () =>
+      buildPatrimonioTimeline({
+        entities,
+        cashTxs,
+        invTxs,
+        base,
+        rateMap,
+        revaluations,
+      }),
+    [entities, cashTxs, invTxs, base, rateMap, revaluations],
+  )
+
+  const markers = React.useMemo(
+    () => revaluations.map((r) => r.at),
+    [revaluations],
   )
 
   const distribution = React.useMemo(
@@ -106,6 +174,35 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          {description && (
+            <p className="text-muted-foreground">{description}</p>
+          )}
+        </div>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => setPricesOpen(true)}
+          >
+            <RefreshCwIcon className="size-4" />
+            Actualizar precios
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 sm:flex-none"
+            onClick={() => setRatesOpen(true)}
+          >
+            <SettingsIcon className="size-4" />
+            Tipos de cambio
+          </Button>
+        </div>
+      </div>
+
       <section className="bg-card space-y-6 rounded-xl border p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
@@ -113,14 +210,14 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
               Patrimonio total
             </p>
             <p className="text-3xl font-semibold tracking-tight tabular-nums">
-              {formatMoney(total, base)}
+              {formatMoney(estimatedTotal, base)}
             </p>
             <p className="text-muted-foreground text-xs">
-              Efectivo {formatMoney(cash.total, base)} · Invertido (a coste){' '}
-              {formatMoney(invested.total, base)}
+              Efectivo {formatMoney(cash.total, base)} · Invertido{' '}
+              {formatMoney(estimatedInv.total, base)}
             </p>
           </div>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -129,15 +226,6 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
             >
               <ChartPieIcon className="size-4" />
               Análisis
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 sm:flex-none"
-              onClick={() => setRatesOpen(true)}
-            >
-              <SettingsIcon className="size-4" />
-              Tipos de cambio
             </Button>
           </div>
         </div>
@@ -160,7 +248,7 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
           </div>
         )}
 
-        <GrowthChart points={timeline} base={base} />
+        <GrowthChart points={timeline} base={base} markers={markers} />
       </section>
 
       <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
@@ -205,6 +293,13 @@ export function PortfolioSummary({ portfolioId }: { portfolioId: string }) {
         onOpenChange={setRatesOpen}
         base={base}
         neededCurrencies={neededCurrencies}
+      />
+
+      <PriceUpdateDialog
+        open={pricesOpen}
+        onOpenChange={setPricesOpen}
+        portfolioId={portfolioId}
+        base={base}
       />
     </div>
   )

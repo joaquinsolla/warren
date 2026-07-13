@@ -5,10 +5,8 @@ import {
   ArrowDownLeftIcon,
   ArrowRightLeftIcon,
   ArrowUpRightIcon,
-  PencilIcon,
   SlidersHorizontalIcon,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { formatMoney } from '@/lib/currencies'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { useAllEntities } from '@/features/entities/hooks'
@@ -16,7 +14,12 @@ import { cashTransactionKey, useCashTransaction } from '@/features/cash/hooks'
 import { CashTransactionFormDialog } from '@/features/cash/CashTransactionFormDialog'
 import { CASH_TYPE_LABELS } from '@/features/cash/labels'
 import type { CashTransactionType } from '@/features/cash/api'
-import { BackButton, Field, NotFound } from '@/routes/detail/detailShared'
+import {
+  BackButton,
+  EditButton,
+  Field,
+  NotFound,
+} from '@/routes/detail/detailShared'
 
 const TYPE_ICON: Record<
   CashTransactionType,
@@ -89,22 +92,13 @@ export function CashTransactionDetailPage() {
             <Icon className="size-5" />
           </div>
           <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight tabular-nums">
+            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight tabular-nums">
               {formatMoney(tx.amount, tx.currency)}
+              <EditButton onClick={() => setEditOpen(true)} />
             </h1>
             <p className="text-muted-foreground text-sm">
               {CASH_TYPE_LABELS[tx.transaction_type]}
             </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditOpen(true)}
-            >
-              <PencilIcon className="size-4" />
-              Editar
-            </Button>
           </div>
         </div>
 

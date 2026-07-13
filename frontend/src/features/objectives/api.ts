@@ -8,7 +8,6 @@ export type ObjectiveFormValues = {
   target_body: string | null
   target_price: number | null
   target_date: string | null
-  is_active: boolean
 }
 
 /** Lista los objetivos de un portfolio (RLS filtra por dueño). */
@@ -44,7 +43,6 @@ export async function createObjective(
       target_body: input.target_body,
       target_price: input.target_price,
       target_date: input.target_date,
-      is_active: input.is_active,
     })
     .select()
     .single()
@@ -62,7 +60,6 @@ export async function updateObjective(
       target_body: values.target_body,
       target_price: values.target_price,
       target_date: values.target_date,
-      is_active: values.is_active,
     })
     .eq('id', id)
     .select()

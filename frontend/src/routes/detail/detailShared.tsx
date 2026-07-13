@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ArrowLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon, PencilIcon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 
@@ -15,6 +15,28 @@ export function BackButton() {
       <ArrowLeftIcon className="size-4" />
       Volver
     </Button>
+  )
+}
+
+export function EditButton({
+  onClick,
+  disabled,
+  label = 'Editar',
+}: {
+  onClick: () => void
+  disabled?: boolean
+  label?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className="text-muted-foreground hover:text-foreground shrink-0 transition-colors disabled:pointer-events-none disabled:opacity-40"
+    >
+      <PencilIcon className="size-4" />
+    </button>
   )
 }
 
