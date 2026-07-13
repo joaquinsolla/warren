@@ -5,19 +5,24 @@ import {
   ArrowDownLeftIcon,
   ArrowRightLeftIcon,
   ArrowUpRightIcon,
+  ChartPieIcon,
   PencilIcon,
   PlusIcon,
   SlidersHorizontalIcon,
-  Trash2Icon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
 import { formatMoney } from '@/lib/currencies'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { entityKey, useEntity, useAllEntities } from '@/features/entities/hooks'
 import { EntityFormDialog } from '@/features/entities/EntityFormDialog'
-import { DeleteEntityDialog } from '@/features/entities/DeleteEntityDialog'
 import { useCashTransactions } from '@/features/cash/hooks'
 import { CashTransactionFormDialog } from '@/features/cash/CashTransactionFormDialog'
 import { CASH_TYPE_LABELS } from '@/features/cash/labels'
@@ -32,6 +37,9 @@ import {
   NotFound,
   useLoadMore,
 } from '@/routes/detail/detailShared'
+import { buildPatrimonioTimeline } from '@/features/portfolios/patrimonio'
+import { GrowthChart } from '@/components/charts/GrowthChart'
+import { RealizedPnLPanel } from '@/components/charts/RealizedPnLPanel'
 const TYPE_ICON: Record<
   CashTransactionType,
   React.ComponentType<{ className?: string }>
@@ -70,9 +78,9 @@ export function EntityDetailPage() {
   )
 
   const [editOpen, setEditOpen] = React.useState(false)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
   const [cashFormOpen, setCashFormOpen] = React.useState(false)
   const [invFormOpen, setInvFormOpen] = React.useState(false)
+  const [analysisOpen, setAnalysisOpen] = React.useState(false)
 
   function refresh(open: boolean) {
     if (!open && id) {
@@ -98,6 +106,20 @@ export function EntityDetailPage() {
   const invPaged = useLoadMore(investmentTxs)
   const cashPaged = useLoadMore(entityCash)
 
+  const emptyRates = React.useMemo(() => new Map<string, number>(), [])
+  const timeline = React.useMemo(
+    () =>
+      entity
+        ? buildPatrimonioTimeline({
+            entities: [entity],
+            cashTxs,
+            invTxs: investmentTxs,
+            base: entity.currency,
+            rateMap: emptyRates,
+          })
+        : [],
+    [entity, cashTxs, investmentTxs, emptyRates],
+  )
   if (isLoading) {
     return (
       <>
@@ -128,53 +150,64 @@ export function EntityDetailPage() {
       <BackButton />
 
       <div className="space-y-8">
-        <div className="flex items-start gap-4">
-          <span style={brandStyle(entity.color)}>
-            <BrandIcon
-              name={entity.name}
-              domain={entity.icon_domain}
-              className={
-                entity.color
-                  ? 'bg-brand text-brand-foreground size-12'
-                  : 'size-12'
-              }
-            />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {entity.name}
-              {entity.deleted_at && (
-                <span className="text-muted-foreground ml-2 text-sm font-normal">
-                  · Eliminado
-                </span>
+        <section className="bg-card space-y-6 rounded-xl border p-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+            <div className="flex min-w-0 flex-1 items-start gap-4">
+              <span style={brandStyle(entity.color)}>
+                <BrandIcon
+                  name={entity.name}
+                  domain={entity.icon_domain}
+                  className={
+                    entity.color
+                      ? 'bg-brand text-brand-foreground size-12'
+                      : 'size-12'
+                  }
+                />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  {entity.name}
+                  {entity.deleted_at && (
+                    <span className="text-muted-foreground ml-2 text-sm font-normal">
+                      · Eliminado
+                    </span>
+                  )}
+                </h1>
+                <p className="text-muted-foreground text-sm">
+                  {entity.type === 'BANK' ? 'Banco' : 'Bróker'} ·{' '}
+                  {entity.currency}
+                </p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {formatMoney(entity.cash_balance_cache, entity.currency)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 sm:shrink-0">
+              {isBroker && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 sm:flex-none"
+                  onClick={() => setAnalysisOpen(true)}
+                >
+                  <ChartPieIcon className="size-4" />
+                  Análisis
+                </Button>
               )}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {entity.type === 'BANK' ? 'Banco' : 'Bróker'} · {entity.currency}
-            </p>
-            <p className="mt-1 text-xl font-semibold tabular-nums">
-              {formatMoney(entity.cash_balance_cache, entity.currency)}
-            </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+                onClick={() => setEditOpen(true)}
+              >
+                <PencilIcon className="size-4" />
+                Editar
+              </Button>
+            </div>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditOpen(true)}
-            >
-              <PencilIcon className="size-4" />
-              Editar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2Icon className="size-4" />
-              Eliminar
-            </Button>
-          </div>
-        </div>
+
+          <GrowthChart points={timeline} base={entity.currency} />
+        </section>
 
         {isBroker && (
           <section className="space-y-4">
@@ -385,15 +418,6 @@ export function EntityDetailPage() {
             portfolioId={portfolioId}
             entity={entity}
           />
-          <DeleteEntityDialog
-            open={deleteOpen}
-            onOpenChange={(o) => {
-              setDeleteOpen(o)
-              refresh(o)
-            }}
-            portfolioId={portfolioId}
-            entity={entity}
-          />
           <CashTransactionFormDialog
             open={cashFormOpen}
             onOpenChange={setCashFormOpen}
@@ -411,6 +435,27 @@ export function EntityDetailPage() {
             />
           )}
         </>
+      )}
+
+      {isBroker && (
+        <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Análisis de {entity.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div>
+                <p className="text-muted-foreground mb-3 text-xs">
+                  Rentabilidad realizada
+                </p>
+                <RealizedPnLPanel
+                  invTxs={investmentTxs}
+                  base={entity.currency}
+                />
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   )

@@ -58,17 +58,31 @@ export function CategoryDonut({
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
       <div className="relative shrink-0">
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-          {arcs.map(({ slice, start, end, i }) => (
-            <path
-              key={i}
-              d={arcPath(start, end)}
-              fill="none"
-              stroke={slice.color}
-              strokeWidth={hover === i ? STROKE + 4 : STROKE}
-              onPointerEnter={() => setHover(i)}
-              onPointerLeave={() => setHover(null)}
-            />
-          ))}
+          {arcs.map(({ slice, start, end, i }) =>
+            end - start >= 359.999 ? (
+              <circle
+                key={i}
+                cx={C}
+                cy={C}
+                r={R}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth={hover === i ? STROKE + 4 : STROKE}
+                onPointerEnter={() => setHover(i)}
+                onPointerLeave={() => setHover(null)}
+              />
+            ) : (
+              <path
+                key={i}
+                d={arcPath(start, end)}
+                fill="none"
+                stroke={slice.color}
+                strokeWidth={hover === i ? STROKE + 4 : STROKE}
+                onPointerEnter={() => setHover(i)}
+                onPointerLeave={() => setHover(null)}
+              />
+            ),
+          )}
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           {hovered ? (

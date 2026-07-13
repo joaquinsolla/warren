@@ -71,18 +71,33 @@ export function DonutChart({
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:gap-6">
       <div className="relative shrink-0">
         <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
-          {arcs.map(({ seg, start, end, i }) => (
-            <path
-              key={i}
-              d={arcPath(start, end)}
-              fill="none"
-              stroke={colorOf(seg.entityId)}
-              strokeWidth={hover === i ? STROKE + 4 : STROKE}
-              strokeOpacity={seg.kind === 'invested' ? 0.5 : 1}
-              onPointerEnter={() => setHover(i)}
-              onPointerLeave={() => setHover(null)}
-            />
-          ))}
+          {arcs.map(({ seg, start, end, i }) =>
+            end - start >= 359.999 ? (
+              <circle
+                key={i}
+                cx={C}
+                cy={C}
+                r={R}
+                fill="none"
+                stroke={colorOf(seg.entityId)}
+                strokeWidth={hover === i ? STROKE + 4 : STROKE}
+                strokeOpacity={seg.kind === 'invested' ? 0.5 : 1}
+                onPointerEnter={() => setHover(i)}
+                onPointerLeave={() => setHover(null)}
+              />
+            ) : (
+              <path
+                key={i}
+                d={arcPath(start, end)}
+                fill="none"
+                stroke={colorOf(seg.entityId)}
+                strokeWidth={hover === i ? STROKE + 4 : STROKE}
+                strokeOpacity={seg.kind === 'invested' ? 0.5 : 1}
+                onPointerEnter={() => setHover(i)}
+                onPointerLeave={() => setHover(null)}
+              />
+            ),
+          )}
         </svg>
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
           {hovered ? (

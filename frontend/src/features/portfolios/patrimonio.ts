@@ -177,3 +177,94 @@ export function buildDistribution(params: {
   }
   return { segments, total }
 }
+
+export type RealizedPnL = {
+  /** Coste FIFO de las participaciones vendidas (incluye comisiones e impuestos de compra). */
+  costBasis: number
+  /** Importe neto recibido en las ventas (gross - fees - taxes). */
+  proceeds: number
+  /** Resultado realizado: proceeds - costBasis. */
+  pnl: number
+  /** Rentabilidad sobre el coste (pnl / costBasis); null si no hay ventas. */
+  returnPct: number | null
+  /** Comisiones pagadas en las operaciones del periodo (compras y ventas). */
+  fees: number
+  /** Impuestos pagados en las operaciones del periodo (compras y ventas). */
+  taxes: number
+  hasSells: boolean
+}
+
+/**
+ * Rentabilidad realizada de una entidad (bróker) a partir de su histórico de
+ * inversiones. Al no existir fuente de precios en vivo, es la única medida
+ * objetiva de ganancia/pérdida: compara lo recibido al vender contra el coste
+ * FIFO de esas mismas participaciones. Las posiciones aún abiertas quedan a
+ * coste (resultado 0) hasta que exista cotización.
+ *
+ * Si se pasa `since`, solo se contabilizan las ventas ejecutadas a partir de
+ * ese instante, pero los lotes FIFO se construyen con TODO el histórico previo
+ * (una venta del periodo puede consumir compras anteriores a la ventana).
+ *
+ * Asume una única moneda (la de la entidad): las operaciones se registran en la
+ * moneda del bróker.
+ */
+export function buildRealizedPnL(
+  invTxs: InvestmentTransaction[],
+  since?: number,
+): RealizedPnL {
+  const sorted = [...invTxs].sort(
+    (a, b) =>
+      new Date(a.executed_at).getTime() - new Date(b.executed_at).getTime() ||
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  )
+
+  const lots = new Map<string, { qty: number; unit: number }[]>()
+  let costBasis = 0
+  let proceeds = 0
+  let fees = 0
+  let taxes = 0
+  let hasSells = false
+
+  for (const tx of sorted) {
+    const inWindow =
+      since === undefined || new Date(tx.executed_at).getTime() >= since
+    if (inWindow) {
+      fees += tx.fees
+      taxes += tx.taxes
+    }
+    if (tx.transaction_type === 'BUY') {
+      const cost = tx.gross_amount + tx.fees + tx.taxes
+      const arr = lots.get(tx.asset_id) ?? []
+      arr.push({ qty: tx.quantity, unit: cost / tx.quantity })
+      lots.set(tx.asset_id, arr)
+    } else {
+      const arr = lots.get(tx.asset_id) ?? []
+      let toConsume = tx.quantity
+      let consumedCost = 0
+      while (toConsume > EPS && arr.length > 0) {
+        const lot = arr[0]
+        const take = Math.min(lot.qty, toConsume)
+        consumedCost += take * lot.unit
+        lot.qty -= take
+        toConsume -= take
+        if (lot.qty <= EPS) arr.shift()
+      }
+      if (inWindow) {
+        hasSells = true
+        proceeds += tx.gross_amount - tx.fees - tx.taxes
+        costBasis += consumedCost
+      }
+    }
+  }
+
+  const pnl = proceeds - costBasis
+  return {
+    costBasis,
+    proceeds,
+    pnl,
+    returnPct: costBasis > EPS ? pnl / costBasis : null,
+    fees,
+    taxes,
+    hasSells,
+  }
+}

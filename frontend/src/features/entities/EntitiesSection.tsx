@@ -1,11 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  MoreVerticalIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-} from 'lucide-react'
+import { MoreVerticalIcon, PencilIcon, PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -18,7 +13,6 @@ import { brandStyle } from '@/lib/brand'
 import { formatMoney, getCurrency } from '@/lib/currencies'
 import { useEntities } from '@/features/entities/hooks'
 import { EntityFormDialog } from '@/features/entities/EntityFormDialog'
-import { DeleteEntityDialog } from '@/features/entities/DeleteEntityDialog'
 import type { Entity } from '@/features/entities/api'
 
 const TYPE_LABELS: Record<Entity['type'], string> = {
@@ -33,8 +27,6 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Entity | null>(null)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
-  const [deleting, setDeleting] = React.useState<Entity | null>(null)
 
   function openCreate() {
     setEditing(null)
@@ -44,11 +36,6 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
   function openEdit(entity: Entity) {
     setEditing(entity)
     setFormOpen(true)
-  }
-
-  function openDelete(entity: Entity) {
-    setDeleting(entity)
-    setDeleteOpen(true)
   }
 
   const grouped = TYPE_ORDER.map((type) => ({
@@ -93,7 +80,6 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
                 key={entity.id}
                 entity={entity}
                 onEdit={() => openEdit(entity)}
-                onDelete={() => openDelete(entity)}
               />
             ))}
           </div>
@@ -106,12 +92,6 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
         portfolioId={portfolioId}
         entity={editing}
       />
-      <DeleteEntityDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        portfolioId={portfolioId}
-        entity={deleting}
-      />
     </section>
   )
 }
@@ -119,11 +99,9 @@ export function EntitiesSection({ portfolioId }: { portfolioId: string }) {
 function EntityCard({
   entity,
   onEdit,
-  onDelete,
 }: {
   entity: Entity
   onEdit: () => void
-  onDelete: () => void
 }) {
   const currency = getCurrency(entity.currency)
   const navigate = useNavigate()
@@ -168,10 +146,6 @@ function EntityCard({
           <DropdownMenuItem onSelect={onEdit}>
             <PencilIcon className="size-4" />
             Editar
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-            <Trash2Icon className="size-4" />
-            Eliminar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

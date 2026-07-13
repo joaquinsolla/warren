@@ -4,7 +4,6 @@ import {
   ChevronsUpDownIcon,
   PencilIcon,
   PlusIcon,
-  Trash2Icon,
   WalletIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,7 +17,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { PortfolioFormDialog } from '@/features/portfolios/PortfolioFormDialog'
-import { DeletePortfolioDialog } from '@/features/portfolios/DeletePortfolioDialog'
 import type { Portfolio } from '@/features/portfolios/api'
 
 export function PortfolioSwitcher() {
@@ -27,7 +25,6 @@ export function PortfolioSwitcher() {
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Portfolio | null>(null)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   function openCreate() {
     setEditing(null)
@@ -79,19 +76,10 @@ export function PortfolioSwitcher() {
             Nueva cartera
           </DropdownMenuItem>
           {currentPortfolio && (
-            <>
-              <DropdownMenuItem onSelect={openEdit}>
-                <PencilIcon className="size-4" />
-                Editar cartera actual
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                variant="destructive"
-                onSelect={() => setDeleteOpen(true)}
-              >
-                <Trash2Icon className="size-4" />
-                Eliminar cartera actual
-              </DropdownMenuItem>
-            </>
+            <DropdownMenuItem onSelect={openEdit}>
+              <PencilIcon className="size-4" />
+              Editar cartera actual
+            </DropdownMenuItem>
           )}
         </DropdownMenuContent>
       </DropdownMenu>
@@ -101,11 +89,6 @@ export function PortfolioSwitcher() {
         onOpenChange={setFormOpen}
         portfolio={editing}
         onCreated={(id) => setCurrentPortfolioId(id)}
-      />
-      <DeletePortfolioDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        portfolio={currentPortfolio}
       />
     </>
   )

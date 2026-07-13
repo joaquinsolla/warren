@@ -17,6 +17,7 @@ type DeleteInvestmentDialogProps = {
   onOpenChange: (open: boolean) => void
   portfolioId: string
   transaction: InvestmentTransaction | null
+  onDeleted?: () => void
 }
 
 export function DeleteInvestmentDialog({
@@ -24,6 +25,7 @@ export function DeleteInvestmentDialog({
   onOpenChange,
   portfolioId,
   transaction,
+  onDeleted,
 }: DeleteInvestmentDialogProps) {
   const deleteMutation = useDeleteInvestmentTransaction(portfolioId)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -37,6 +39,7 @@ export function DeleteInvestmentDialog({
     setErrorMsg(null)
     try {
       await deleteMutation.mutateAsync(transaction.id)
+      onDeleted?.()
       onOpenChange(false)
     } catch (err) {
       setErrorMsg((err as Error).message)

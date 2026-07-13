@@ -1,4 +1,5 @@
 import * as React from 'react'
+import { Trash2Icon } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
 import { useProfile } from '@/features/profile/hooks'
 import { useFxRates } from '@/features/fx/hooks'
 import { FxRatesDialog } from '@/features/fx/FxRatesDialog'
+import { DeleteCashTransactionDialog } from '@/features/cash/DeleteCashTransactionDialog'
 import { CASH_TYPE_LABELS, CASH_TYPE_ORDER } from '@/features/cash/labels'
 import type { CashTransaction, CashTransactionType } from '@/features/cash/api'
 import type { Entity } from '@/features/entities/api'
@@ -82,6 +84,7 @@ export function CashTransactionFormDialog({
   const [notes, setNotes] = React.useState('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [rateDialogOpen, setRateDialogOpen] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   React.useEffect(() => {
     if (!open) return
@@ -498,6 +501,18 @@ export function CashTransactionFormDialog({
           {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}
 
           <DialogFooter>
+            {isEdit && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setDeleteOpen(true)}
+                disabled={isPending}
+                className="sm:mr-auto"
+              >
+                <Trash2Icon className="size-4" />
+                Eliminar
+              </Button>
+            )}
             <Button
               type="button"
               variant="ghost"
@@ -520,6 +535,15 @@ export function CashTransactionFormDialog({
           Boolean(c),
         )}
       />
+      {isEdit && (
+        <DeleteCashTransactionDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          portfolioId={portfolioId}
+          transaction={transaction ?? null}
+          onDeleted={() => onOpenChange(false)}
+        />
+      )}
     </Dialog>
   )
 }

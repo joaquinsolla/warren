@@ -60,9 +60,7 @@ export function FxRatesDialog({
 
   const addableCurrencies = React.useMemo(
     () =>
-      CURRENCIES.filter(
-        (c) => c.code !== base && !currencies.includes(c.code),
-      ),
+      CURRENCIES.filter((c) => c.code !== base && !currencies.includes(c.code)),
     [base, currencies],
   )
 

@@ -23,6 +23,7 @@ type DeleteEntityDialogProps = {
   onOpenChange: (open: boolean) => void
   portfolioId: string
   entity: Entity | null
+  onDeleted?: () => void
 }
 
 function isForeignKeyError(err: unknown): boolean {
@@ -38,6 +39,7 @@ export function DeleteEntityDialog({
   onOpenChange,
   portfolioId,
   entity,
+  onDeleted,
 }: DeleteEntityDialogProps) {
   const { user } = useAuth()
   const deleteMutation = useDeleteEntity(portfolioId)
@@ -85,6 +87,7 @@ export function DeleteEntityDialog({
       }
       await deleteMutation.mutateAsync(entity.id)
       setVerifying(false)
+      onDeleted?.()
       onOpenChange(false)
     } catch (err) {
       setVerifying(false)

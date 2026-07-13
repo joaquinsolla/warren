@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { PencilIcon, Trash2Icon } from 'lucide-react'
+import { PencilIcon, PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
@@ -9,7 +9,7 @@ import { formatMoney } from '@/lib/currencies'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { assetKey, useAsset } from '@/features/assets/hooks'
 import { AssetFormDialog } from '@/features/assets/AssetFormDialog'
-import { DeleteAssetDialog } from '@/features/assets/DeleteAssetDialog'
+import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
 import { ASSET_TYPE_LABELS } from '@/features/assets/labels'
 import { useEntities } from '@/features/entities/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
@@ -49,7 +49,7 @@ export function AssetDetailPage() {
   )
 
   const [editOpen, setEditOpen] = React.useState(false)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [investOpen, setInvestOpen] = React.useState(false)
 
   function refresh(open: boolean) {
     if (!open && id) {
@@ -109,6 +109,14 @@ export function AssetDetailPage() {
           </div>
           <div className="flex shrink-0 gap-2">
             <Button
+              size="sm"
+              onClick={() => setInvestOpen(true)}
+              disabled={Boolean(asset.deleted_at)}
+            >
+              <PlusIcon className="size-4" />
+              Operar
+            </Button>
+            <Button
               variant="outline"
               size="sm"
               onClick={() => setEditOpen(true)}
@@ -116,15 +124,6 @@ export function AssetDetailPage() {
             >
               <PencilIcon className="size-4" />
               Editar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-              disabled={Boolean(asset.deleted_at)}
-            >
-              <Trash2Icon className="size-4" />
-              Eliminar
             </Button>
           </div>
         </div>
@@ -248,14 +247,16 @@ export function AssetDetailPage() {
         }}
         asset={asset}
       />
-      <DeleteAssetDialog
-        open={deleteOpen}
-        onOpenChange={(o) => {
-          setDeleteOpen(o)
-          refresh(o)
-        }}
-        asset={asset}
-      />
+
+      {portfolioId && (
+        <InvestmentFormDialog
+          open={investOpen}
+          onOpenChange={setInvestOpen}
+          portfolioId={portfolioId}
+          transaction={null}
+          defaultAssetId={asset.id}
+        />
+      )}
     </>
   )
 }

@@ -16,12 +16,14 @@ type DeleteAssetDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   asset: Asset | null
+  onDeleted?: () => void
 }
 
 export function DeleteAssetDialog({
   open,
   onOpenChange,
   asset,
+  onDeleted,
 }: DeleteAssetDialogProps) {
   const deleteMutation = useDeleteAsset()
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
@@ -35,6 +37,7 @@ export function DeleteAssetDialog({
     setErrorMsg(null)
     try {
       await deleteMutation.mutateAsync(asset.id)
+      onDeleted?.()
       onOpenChange(false)
     } catch (err) {
       setErrorMsg((err as Error).message)

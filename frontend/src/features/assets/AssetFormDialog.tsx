@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { CheckCircle2Icon, CircleAlertIcon } from 'lucide-react'
+import { CheckCircle2Icon, CircleAlertIcon, Trash2Icon } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { CURRENCIES } from '@/lib/currencies'
 import { brandStyle } from '@/lib/brand'
 import { useProfile } from '@/features/profile/hooks'
 import { useCreateAsset, useUpdateAsset } from '@/features/assets/hooks'
+import { DeleteAssetDialog } from '@/features/assets/DeleteAssetDialog'
 import { ASSET_TYPE_LABELS, ASSET_TYPE_ORDER } from '@/features/assets/labels'
 import type { Asset, AssetType } from '@/features/assets/api'
 
@@ -52,6 +53,7 @@ export function AssetFormDialog({
   const [iconDomain, setIconDomain] = React.useState('')
   const [color, setColor] = React.useState<string | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   const cleanDomain = normalizeDomain(iconDomain)
   const domainLooksValid =
@@ -108,199 +110,223 @@ export function AssetFormDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <DialogHeader>
-            <DialogTitle>
-              {isEdit ? 'Editar activo' : 'Nuevo activo'}
-            </DialogTitle>
-            <DialogDescription>
-              Un valor de tu catálogo: acción, ETF, cripto… Lo usarás al
-              registrar inversiones.
-            </DialogDescription>
-          </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>
+                {isEdit ? 'Editar activo' : 'Nuevo activo'}
+              </DialogTitle>
+              <DialogDescription>
+                Un valor de tu catálogo: acción, ETF, cripto… Lo usarás al
+                registrar inversiones.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="flex items-center gap-3">
-            <span style={brandStyle(color)}>
-              <BrandIcon
-                name={trimmedName || trimmedSymbol || '?'}
-                domain={cleanDomain}
-                className={color ? 'bg-brand text-brand-foreground' : undefined}
-              />
-            </span>
-            <div className="grid flex-1 grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="asset-symbol">Símbolo</Label>
-                <Input
-                  id="asset-symbol"
-                  value={symbol}
-                  onChange={(e) => setSymbol(e.target.value)}
-                  placeholder="AAPL, BTC, VWCE…"
-                  autoFocus
-                  autoCapitalize="characters"
-                  spellCheck={false}
-                  maxLength={24}
-                  className="uppercase"
+            <div className="flex items-center gap-3">
+              <span style={brandStyle(color)}>
+                <BrandIcon
+                  name={trimmedName || trimmedSymbol || '?'}
+                  domain={cleanDomain}
+                  className={
+                    color ? 'bg-brand text-brand-foreground' : undefined
+                  }
                 />
+              </span>
+              <div className="grid flex-1 grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="asset-symbol">Símbolo</Label>
+                  <Input
+                    id="asset-symbol"
+                    value={symbol}
+                    onChange={(e) => setSymbol(e.target.value)}
+                    placeholder="AAPL, BTC, VWCE…"
+                    autoFocus
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    maxLength={24}
+                    className="uppercase"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo</Label>
+                  <Select
+                    value={assetType}
+                    onValueChange={(v) => setAssetType(v as AssetType)}
+                    disabled={isEdit}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ASSET_TYPE_ORDER.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          {ASSET_TYPE_LABELS[t]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {isEdit && (
+                    <p className="text-muted-foreground text-xs">
+                      El tipo no se puede cambiar.
+                    </p>
+                  )}
+                </div>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="asset-name">Nombre</Label>
+              <Input
+                id="asset-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Apple Inc., Bitcoin…"
+                maxLength={120}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Tipo</Label>
-                <Select
-                  value={assetType}
-                  onValueChange={(v) => setAssetType(v as AssetType)}
-                  disabled={isEdit}
-                >
+                <Label>Moneda</Label>
+                <Select value={currency} onValueChange={setCurrency}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {ASSET_TYPE_ORDER.map((t) => (
-                      <SelectItem key={t} value={t}>
-                        {ASSET_TYPE_LABELS[t]}
+                    {CURRENCIES.map((c) => (
+                      <SelectItem key={c.code} value={c.code}>
+                        {c.code} · {c.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {isEdit && (
-                  <p className="text-muted-foreground text-xs">
-                    El tipo no se puede cambiar.
-                  </p>
-                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="asset-exchange">
+                  Mercado{' '}
+                  <span className="text-muted-foreground font-normal">
+                    (opcional)
+                  </span>
+                </Label>
+                <Input
+                  id="asset-exchange"
+                  value={exchange}
+                  onChange={(e) => setExchange(e.target.value)}
+                  placeholder="NASDAQ, XETRA…"
+                  maxLength={40}
+                />
               </div>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="asset-name">Nombre</Label>
-            <Input
-              id="asset-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Apple Inc., Bitcoin…"
-              maxLength={120}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Moneda</Label>
-              <Select value={currency} onValueChange={setCurrency}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c.code} value={c.code}>
-                      {c.code} · {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="asset-exchange">
-                Mercado{' '}
+              <Label htmlFor="asset-isin">
+                ISIN{' '}
                 <span className="text-muted-foreground font-normal">
                   (opcional)
                 </span>
               </Label>
               <Input
-                id="asset-exchange"
-                value={exchange}
-                onChange={(e) => setExchange(e.target.value)}
-                placeholder="NASDAQ, XETRA…"
-                maxLength={40}
+                id="asset-isin"
+                value={isin}
+                onChange={(e) => setIsin(e.target.value)}
+                placeholder="US0378331005"
+                autoCapitalize="characters"
+                spellCheck={false}
+                maxLength={12}
+                className="uppercase"
               />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="asset-isin">
-              ISIN{' '}
-              <span className="text-muted-foreground font-normal">
-                (opcional)
-              </span>
-            </Label>
-            <Input
-              id="asset-isin"
-              value={isin}
-              onChange={(e) => setIsin(e.target.value)}
-              placeholder="US0378331005"
-              autoCapitalize="characters"
-              spellCheck={false}
-              maxLength={12}
-              className="uppercase"
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="asset-icon">
+                Dominio de la web{' '}
+                <span className="text-muted-foreground font-normal">
+                  (opcional)
+                </span>
+              </Label>
+              <Input
+                id="asset-icon"
+                value={iconDomain}
+                onChange={(e) => setIconDomain(e.target.value)}
+                placeholder="apple.com, nvidia.com, bitcoin.org…"
+                inputMode="url"
+                autoCapitalize="none"
+                spellCheck={false}
+              />
+              {iconDomain.trim() && domainLooksValid && (
+                <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                  <CheckCircle2Icon className="text-positive size-3.5" />
+                  Vista previa del icono a la izquierda. Si no aparece, se usará
+                  la inicial.
+                </p>
+              )}
+              {iconDomain.trim() && !domainLooksValid && (
+                <p className="text-muted-foreground flex items-center gap-1 text-xs">
+                  <CircleAlertIcon className="size-3.5" />
+                  Escribe un dominio válido, p. ej. <code>apple.com</code>.
+                </p>
+              )}
+              {!iconDomain.trim() && (
+                <p className="text-muted-foreground text-xs">
+                  Se toma el icono del sitio web (vía DuckDuckGo). Si se deja
+                  vacío se usa la inicial del símbolo.
+                </p>
+              )}
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="asset-icon">
-              Dominio de la web{' '}
-              <span className="text-muted-foreground font-normal">
-                (opcional)
-              </span>
-            </Label>
-            <Input
-              id="asset-icon"
-              value={iconDomain}
-              onChange={(e) => setIconDomain(e.target.value)}
-              placeholder="apple.com, nvidia.com, bitcoin.org…"
-              inputMode="url"
-              autoCapitalize="none"
-              spellCheck={false}
-            />
-            {iconDomain.trim() && domainLooksValid && (
-              <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                <CheckCircle2Icon className="text-positive size-3.5" />
-                Vista previa del icono a la izquierda. Si no aparece, se usará
-                la inicial.
-              </p>
-            )}
-            {iconDomain.trim() && !domainLooksValid && (
-              <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                <CircleAlertIcon className="size-3.5" />
-                Escribe un dominio válido, p. ej. <code>apple.com</code>.
-              </p>
-            )}
-            {!iconDomain.trim() && (
-              <p className="text-muted-foreground text-xs">
-                Se toma el icono del sitio web (vía DuckDuckGo). Si se deja
-                vacío se usa la inicial del símbolo.
-              </p>
-            )}
-          </div>
+            <div className="space-y-2">
+              <Label>
+                Color{' '}
+                <span className="text-muted-foreground font-normal">
+                  (opcional)
+                </span>
+              </Label>
+              <ColorPicker value={color} onChange={setColor} />
+            </div>
 
-          <div className="space-y-2">
-            <Label>
-              Color{' '}
-              <span className="text-muted-foreground font-normal">
-                (opcional)
-              </span>
-            </Label>
-            <ColorPicker value={color} onChange={setColor} />
-          </div>
+            {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}
 
-          {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={() => onOpenChange(false)}
-              disabled={isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              type="submit"
-              disabled={isPending || !trimmedSymbol || !trimmedName}
-            >
-              {isEdit ? 'Guardar cambios' : 'Crear activo'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+            <DialogFooter>
+              {isEdit && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => setDeleteOpen(true)}
+                  disabled={isPending}
+                  className="sm:mr-auto"
+                >
+                  <Trash2Icon className="size-4" />
+                  Eliminar
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => onOpenChange(false)}
+                disabled={isPending}
+              >
+                Cancelar
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending || !trimmedSymbol || !trimmedName}
+              >
+                {isEdit ? 'Guardar cambios' : 'Crear activo'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+      {isEdit && (
+        <DeleteAssetDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          asset={asset ?? null}
+          onDeleted={() => onOpenChange(false)}
+        />
+      )}
+    </>
   )
 }

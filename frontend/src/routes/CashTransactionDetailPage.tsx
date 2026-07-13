@@ -7,7 +7,6 @@ import {
   ArrowUpRightIcon,
   PencilIcon,
   SlidersHorizontalIcon,
-  Trash2Icon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatMoney } from '@/lib/currencies'
@@ -15,7 +14,6 @@ import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { useAllEntities } from '@/features/entities/hooks'
 import { cashTransactionKey, useCashTransaction } from '@/features/cash/hooks'
 import { CashTransactionFormDialog } from '@/features/cash/CashTransactionFormDialog'
-import { DeleteCashTransactionDialog } from '@/features/cash/DeleteCashTransactionDialog'
 import { CASH_TYPE_LABELS } from '@/features/cash/labels'
 import type { CashTransactionType } from '@/features/cash/api'
 import { BackButton, Field, NotFound } from '@/routes/detail/detailShared'
@@ -47,7 +45,6 @@ export function CashTransactionDetailPage() {
   const { data: entities = [] } = useAllEntities(portfolioId)
 
   const [editOpen, setEditOpen] = React.useState(false)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   function refresh(open: boolean) {
     if (!open && id) {
@@ -108,14 +105,6 @@ export function CashTransactionDetailPage() {
               <PencilIcon className="size-4" />
               Editar
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2Icon className="size-4" />
-              Eliminar
-            </Button>
           </div>
         </div>
 
@@ -140,26 +129,15 @@ export function CashTransactionDetailPage() {
       </div>
 
       {portfolioId && (
-        <>
-          <CashTransactionFormDialog
-            open={editOpen}
-            onOpenChange={(o) => {
-              setEditOpen(o)
-              refresh(o)
-            }}
-            portfolioId={portfolioId}
-            transaction={tx}
-          />
-          <DeleteCashTransactionDialog
-            open={deleteOpen}
-            onOpenChange={(o) => {
-              setDeleteOpen(o)
-              refresh(o)
-            }}
-            portfolioId={portfolioId}
-            transaction={tx}
-          />
-        </>
+        <CashTransactionFormDialog
+          open={editOpen}
+          onOpenChange={(o) => {
+            setEditOpen(o)
+            refresh(o)
+          }}
+          portfolioId={portfolioId}
+          transaction={tx}
+        />
       )}
     </>
   )

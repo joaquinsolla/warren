@@ -589,6 +589,14 @@ El valor de mercado y la plusvalía latente requieren precio de mercado en vivo
 el historial, no encajan como caché. Cuando exista fuente de cotizaciones se
 calcularán en vivo.
 
+**Rentabilidad realizada** (análisis del bróker): sin fuente de precios, la
+única medida objetiva de ganancia/pérdida es la de las posiciones cerradas.
+Se calcula por FIFO comparando el **importe recibido** en las ventas
+(`gross - fees - taxes`) con el **coste** de esas mismas participaciones
+(`gross + fees + taxes` de las compras consumidas). El resultado realizado es
+`recibido - coste` y la rentabilidad `resultado / coste`. Las posiciones aún
+abiertas se valoran a coste (resultado 0) hasta que exista cotización.
+
 Limitación actual: la operación se registra en la moneda de la entidad (bróker).
 
 ---

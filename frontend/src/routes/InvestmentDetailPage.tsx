@@ -1,7 +1,7 @@
 import * as React from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { PencilIcon, Trash2Icon } from 'lucide-react'
+import { PencilIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
@@ -14,7 +14,6 @@ import {
   useInvestmentTransaction,
 } from '@/features/investments/hooks'
 import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
-import { DeleteInvestmentDialog } from '@/features/investments/DeleteInvestmentDialog'
 import { BackButton, Field, NotFound } from '@/routes/detail/detailShared'
 
 const dateTimeFmt = new Intl.DateTimeFormat('es-ES', {
@@ -35,7 +34,6 @@ export function InvestmentDetailPage() {
   const { data: entity } = useEntity(tx?.entity_id)
 
   const [editOpen, setEditOpen] = React.useState(false)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
 
   function refresh(open: boolean) {
     if (!open && id) {
@@ -111,14 +109,6 @@ export function InvestmentDetailPage() {
               <PencilIcon className="size-4" />
               Editar
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDeleteOpen(true)}
-            >
-              <Trash2Icon className="size-4" />
-              Eliminar
-            </Button>
           </div>
         </div>
 
@@ -162,26 +152,15 @@ export function InvestmentDetailPage() {
       </div>
 
       {portfolioId && (
-        <>
-          <InvestmentFormDialog
-            open={editOpen}
-            onOpenChange={(o) => {
-              setEditOpen(o)
-              refresh(o)
-            }}
-            portfolioId={portfolioId}
-            transaction={tx}
-          />
-          <DeleteInvestmentDialog
-            open={deleteOpen}
-            onOpenChange={(o) => {
-              setDeleteOpen(o)
-              refresh(o)
-            }}
-            portfolioId={portfolioId}
-            transaction={tx}
-          />
-        </>
+        <InvestmentFormDialog
+          open={editOpen}
+          onOpenChange={(o) => {
+            setEditOpen(o)
+            refresh(o)
+          }}
+          portfolioId={portfolioId}
+          transaction={tx}
+        />
       )}
     </>
   )

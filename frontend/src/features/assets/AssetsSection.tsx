@@ -1,11 +1,6 @@
 import * as React from 'react'
 import { useNavigate } from 'react-router-dom'
-import {
-  MoreVerticalIcon,
-  PencilIcon,
-  PlusIcon,
-  Trash2Icon,
-} from 'lucide-react'
+import { MoreVerticalIcon, PencilIcon, PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -18,7 +13,6 @@ import { brandStyle } from '@/lib/brand'
 import { getCurrency } from '@/lib/currencies'
 import { useAssets } from '@/features/assets/hooks'
 import { AssetFormDialog } from '@/features/assets/AssetFormDialog'
-import { DeleteAssetDialog } from '@/features/assets/DeleteAssetDialog'
 import { ASSET_TYPE_LABELS, ASSET_TYPE_ORDER } from '@/features/assets/labels'
 import type { Asset } from '@/features/assets/api'
 
@@ -27,8 +21,6 @@ export function AssetsSection() {
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<Asset | null>(null)
-  const [deleteOpen, setDeleteOpen] = React.useState(false)
-  const [deleting, setDeleting] = React.useState<Asset | null>(null)
 
   function openCreate() {
     setEditing(null)
@@ -38,11 +30,6 @@ export function AssetsSection() {
   function openEdit(asset: Asset) {
     setEditing(asset)
     setFormOpen(true)
-  }
-
-  function openDelete(asset: Asset) {
-    setDeleting(asset)
-    setDeleteOpen(true)
   }
 
   const grouped = ASSET_TYPE_ORDER.map((type) => ({
@@ -92,7 +79,6 @@ export function AssetsSection() {
                 key={asset.id}
                 asset={asset}
                 onEdit={() => openEdit(asset)}
-                onDelete={() => openDelete(asset)}
               />
             ))}
           </div>
@@ -104,24 +90,11 @@ export function AssetsSection() {
         onOpenChange={setFormOpen}
         asset={editing}
       />
-      <DeleteAssetDialog
-        open={deleteOpen}
-        onOpenChange={setDeleteOpen}
-        asset={deleting}
-      />
     </section>
   )
 }
 
-function AssetCard({
-  asset,
-  onEdit,
-  onDelete,
-}: {
-  asset: Asset
-  onEdit: () => void
-  onDelete: () => void
-}) {
+function AssetCard({ asset, onEdit }: { asset: Asset; onEdit: () => void }) {
   const currency = getCurrency(asset.currency)
   const navigate = useNavigate()
 
@@ -166,10 +139,6 @@ function AssetCard({
           <DropdownMenuItem onSelect={onEdit}>
             <PencilIcon className="size-4" />
             Editar
-          </DropdownMenuItem>
-          <DropdownMenuItem variant="destructive" onSelect={onDelete}>
-            <Trash2Icon className="size-4" />
-            Eliminar
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

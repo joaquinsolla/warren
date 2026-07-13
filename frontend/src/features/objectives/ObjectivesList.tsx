@@ -1,16 +1,8 @@
 import * as React from 'react'
-import { PencilIcon, PlusIcon, TargetIcon, Trash2Icon } from 'lucide-react'
+import { PencilIcon, PlusIcon, TargetIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { formatMoney } from '@/lib/currencies'
-import { useObjectives, useDeleteObjective } from '@/features/objectives/hooks'
+import { useObjectives } from '@/features/objectives/hooks'
 import { ObjectiveFormDialog } from '@/features/objectives/ObjectiveFormDialog'
 import type { InvestmentObjective } from '@/features/objectives/api'
 
@@ -47,7 +39,6 @@ export function ObjectivesList({
   currency,
 }: ObjectivesListProps) {
   const { data: all = [] } = useObjectives(portfolioId)
-  const deleteMutation = useDeleteObjective(portfolioId)
 
   const objectives = React.useMemo(
     () =>
@@ -61,9 +52,6 @@ export function ObjectivesList({
 
   const [formOpen, setFormOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<InvestmentObjective | null>(null)
-  const [deleting, setDeleting] = React.useState<InvestmentObjective | null>(
-    null,
-  )
 
   return (
     <section className="space-y-4">
@@ -129,14 +117,6 @@ export function ObjectivesList({
                 >
                   <PencilIcon className="size-4" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Eliminar objetivo"
-                  onClick={() => setDeleting(o)}
-                >
-                  <Trash2Icon className="size-4" />
-                </Button>
               </div>
             </div>
           ))}
@@ -152,40 +132,6 @@ export function ObjectivesList({
         currency={currency}
         objective={editing}
       />
-
-      <Dialog
-        open={Boolean(deleting)}
-        onOpenChange={(o) => !o && setDeleting(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Eliminar objetivo</DialogTitle>
-            <DialogDescription>
-              Esta acción no se puede deshacer.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setDeleting(null)}
-              disabled={deleteMutation.isPending}
-            >
-              Cancelar
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (!deleting) return
-                await deleteMutation.mutateAsync(deleting.id)
-                setDeleting(null)
-              }}
-              disabled={deleteMutation.isPending}
-            >
-              Eliminar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </section>
   )
 }
