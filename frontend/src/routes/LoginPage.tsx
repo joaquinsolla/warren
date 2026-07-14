@@ -45,7 +45,8 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
+      <h1 className="mb-6 text-4xl font-bold tracking-tight">Warren</h1>
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl">Iniciar sesión</CardTitle>

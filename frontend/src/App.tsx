@@ -18,6 +18,7 @@ import { HoldingDetailPage } from '@/routes/HoldingDetailPage'
 import { CashTransactionDetailPage } from '@/routes/CashTransactionDetailPage'
 import { InvestmentDetailPage } from '@/routes/InvestmentDetailPage'
 import { AssetDetailPage } from '@/routes/AssetDetailPage'
+import { AccountPage } from '@/routes/AccountPage'
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
             <Route path="/cash/:id" element={<CashTransactionDetailPage />} />
             <Route path="/investments/:id" element={<InvestmentDetailPage />} />
             <Route path="/assets/:id" element={<AssetDetailPage />} />
+            <Route path="/account" element={<AccountPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

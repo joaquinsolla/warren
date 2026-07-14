@@ -7,7 +7,8 @@ import {
   PlusIcon,
   RefreshCwIcon,
   ScaleIcon,
-  ZapIcon,
+  PocketKnifeIcon,
+  UserIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -64,6 +65,12 @@ export function SettingsMenu() {
       icon: <ScaleIcon className="size-4" />,
       onClick: () => setRecomputeOpen(true),
     },
+    {
+      label: 'Gestionar cuenta',
+      description: 'Consulta tu email y cambia la contraseña.',
+      icon: <UserIcon className="size-4" />,
+      onClick: () => navigate('/account'),
+    },
   ]
 
   function run(onClick: () => void) {
@@ -79,7 +86,7 @@ export function SettingsMenu() {
         aria-label="Acciones"
         onClick={() => setMenuOpen(true)}
       >
-        <ZapIcon className="size-4" />
+        <PocketKnifeIcon className="size-4" />
       </Button>
 
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
