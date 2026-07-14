@@ -1,6 +1,11 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
-import { ChartPieIcon, TriangleAlertIcon } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  ChartPieIcon,
+  ClockIcon,
+  TargetIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -17,6 +22,8 @@ import { useHoldings } from '@/features/holdings/hooks'
 import { useCashTransactions } from '@/features/cash/hooks'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
 import { useFxRates } from '@/features/fx/hooks'
+import { useObjectives } from '@/features/objectives/hooks'
+import { isObjectiveMet } from '@/features/objectives/status'
 import {
   buildDistribution,
   buildPatrimonioTimeline,
@@ -59,6 +66,8 @@ export function PortfolioSummary({
     entityIds,
   )
   const { data: rates = [] } = useFxRates()
+  const { data: objectives = [] } = useObjectives(portfolioId)
+  const navigate = useNavigate()
 
   const [analysisOpen, setAnalysisOpen] = React.useState(false)
   const [analysisView, setAnalysisView] = React.useState<'entity' | 'liquid'>(
@@ -162,6 +171,14 @@ export function PortfolioSummary({
     [entities, holdings, base, rateMap, priceMap],
   )
 
+  const metObjectives = React.useMemo(
+    () =>
+      objectives.filter((o) =>
+        isObjectiveMet(o, priceMap.get(o.asset_id) ?? null),
+      ).length,
+    [objectives, priceMap],
+  )
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -192,6 +209,15 @@ export function PortfolioSummary({
               variant="outline"
               size="sm"
               className="flex-1 sm:flex-none"
+              onClick={() => navigate('/history')}
+            >
+              <ClockIcon className="size-4" />
+              Historial
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none"
               onClick={() => setAnalysisOpen(true)}
             >
               <ChartPieIcon className="size-4" />
@@ -199,6 +225,17 @@ export function PortfolioSummary({
             </Button>
           </div>
         </div>
+
+        {metObjectives > 0 && (
+          <div className="border-positive/30 bg-positive/5 text-positive flex items-center gap-2 rounded-md border p-3 text-sm">
+            <TargetIcon className="size-4 shrink-0" />
+            <span>
+              {metObjectives === 1
+                ? 'Tienes 1 objetivo cumplido.'
+                : `Tienes ${metObjectives} objetivos cumplidos.`}
+            </span>
+          </div>
+        )}
 
         {missing.length > 0 && (
           <div className="text-muted-foreground flex items-start gap-2 rounded-md border border-dashed p-3 text-xs">

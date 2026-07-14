@@ -6,6 +6,7 @@ import {
   LayersIcon,
   PlusIcon,
   RefreshCwIcon,
+  ScaleIcon,
   SettingsIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -16,12 +17,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { AssetFormDialog } from '@/features/assets/AssetFormDialog'
+import { RecomputeBalancesDialog } from '@/features/portfolios/RecomputeBalancesDialog'
+import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 
 export function SettingsMenu() {
   const navigate = useNavigate()
+  const { currentPortfolioId } = useCurrentPortfolio()
 
   const [menuOpen, setMenuOpen] = React.useState(false)
   const [assetOpen, setAssetOpen] = React.useState(false)
+  const [recomputeOpen, setRecomputeOpen] = React.useState(false)
 
   const options: {
     label: string
@@ -52,6 +57,12 @@ export function SettingsMenu() {
       description: 'Configura las conversiones de divisa.',
       icon: <CoinsIcon className="size-4" />,
       onClick: () => navigate('/fx'),
+    },
+    {
+      label: 'Recalcular saldos',
+      description: 'Reconstruye la caché desde el histórico.',
+      icon: <ScaleIcon className="size-4" />,
+      onClick: () => setRecomputeOpen(true),
     },
   ]
 
@@ -105,6 +116,14 @@ export function SettingsMenu() {
         onOpenChange={setAssetOpen}
         asset={null}
       />
+
+      {currentPortfolioId && (
+        <RecomputeBalancesDialog
+          open={recomputeOpen}
+          onOpenChange={setRecomputeOpen}
+          portfolioId={currentPortfolioId}
+        />
+      )}
     </>
   )
 }

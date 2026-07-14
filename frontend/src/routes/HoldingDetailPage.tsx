@@ -161,6 +161,7 @@ export function HoldingDetailPage() {
             entityId={holding.entity_id}
             scope="entity"
             currency={currency}
+            currentPrice={price}
           />
         )}
 

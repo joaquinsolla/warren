@@ -42,7 +42,7 @@ export type Database = {
           id?: string
           isin?: string | null
           manual_price: number
-          manual_price_at?: string
+          manual_price_at: string
           name: string
           symbol: string
           user_id: string
@@ -468,6 +468,10 @@ export type Database = {
       }
       recompute_holding: {
         Args: { p_asset_id: string; p_entity_id: string }
+        Returns: undefined
+      }
+      recompute_portfolio: {
+        Args: { p_portfolio_id: string }
         Returns: undefined
       }
       user_owns_entity: { Args: { p_entity_id: string }; Returns: boolean }

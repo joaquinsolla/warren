@@ -3,6 +3,7 @@ import { PencilIcon, PlusIcon, TargetIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatMoney } from '@/lib/currencies'
 import { useObjectives } from '@/features/objectives/hooks'
+import { isObjectiveMet } from '@/features/objectives/status'
 import { ObjectiveFormDialog } from '@/features/objectives/ObjectiveFormDialog'
 import type { InvestmentObjective } from '@/features/objectives/api'
 
@@ -13,7 +14,15 @@ type ObjectivesListProps = {
   entityId: string | null
   scope: 'entity' | 'asset'
   currency: string
+  /** Precio actual (manual) del activo para evaluar objetivos de precio. */
+  currentPrice: number | null
 }
+
+const objectiveDateFmt = new Intl.DateTimeFormat('es-ES', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+})
 
 export function ObjectivesList({
   portfolioId,
@@ -21,6 +30,7 @@ export function ObjectivesList({
   entityId,
   scope,
   currency,
+  currentPrice,
 }: ObjectivesListProps) {
   const { data: all = [] } = useObjectives(portfolioId)
 
@@ -62,36 +72,60 @@ export function ObjectivesList({
         </div>
       ) : (
         <div className="divide-y rounded-xl border">
-          {objectives.map((o) => (
-            <div key={o.id} className="flex items-start gap-3 p-4">
-              <div className="bg-muted text-muted-foreground mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full">
-                <TargetIcon className="size-4" />
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                {o.target_body && <p className="text-sm">{o.target_body}</p>}
-                {o.target_price != null && (
-                  <div className="text-muted-foreground text-xs">
-                    <span className="tabular-nums">
-                      Objetivo: {formatMoney(o.target_price, currency)}
-                    </span>
-                  </div>
-                )}
-              </div>
-              <div className="flex shrink-0 gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Editar objetivo"
-                  onClick={() => {
-                    setEditing(o)
-                    setFormOpen(true)
-                  }}
+          {objectives.map((o) => {
+            const met = isObjectiveMet(o, currentPrice)
+            return (
+              <div key={o.id} className="flex items-start gap-3 p-4">
+                <div
+                  className={
+                    'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full ' +
+                    (met
+                      ? 'bg-positive/10 text-positive'
+                      : 'bg-muted text-muted-foreground')
+                  }
                 >
-                  <PencilIcon className="size-4" />
-                </Button>
+                  <TargetIcon className="size-4" />
+                </div>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {o.target_body && (
+                      <p className="text-sm">{o.target_body}</p>
+                    )}
+                    {met && (
+                      <span className="bg-positive/10 text-positive rounded-full px-2 py-0.5 text-xs font-medium">
+                        Cumplido
+                      </span>
+                    )}
+                  </div>
+                  {o.target_price != null && (
+                    <div className="text-muted-foreground text-xs">
+                      <span className="tabular-nums">
+                        Objetivo: {formatMoney(o.target_price, currency)}
+                      </span>
+                    </div>
+                  )}
+                  {o.target_date != null && (
+                    <div className="text-muted-foreground text-xs tabular-nums">
+                      Fecha: {objectiveDateFmt.format(new Date(o.target_date))}
+                    </div>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Editar objetivo"
+                    onClick={() => {
+                      setEditing(o)
+                      setFormOpen(true)
+                    }}
+                  >
+                    <PencilIcon className="size-4" />
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

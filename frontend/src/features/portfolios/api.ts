@@ -66,3 +66,14 @@ export async function deletePortfolio(id: string): Promise<void> {
   const { error } = await supabase.from('portfolios').delete().eq('id', id)
   if (error) throw error
 }
+
+/**
+ * Reconstruye toda la caché (efectivo de entidades y holdings) del portfolio
+ * desde el histórico de movimientos. Fuente de verdad = las transacciones.
+ */
+export async function recomputePortfolio(portfolioId: string): Promise<void> {
+  const { error } = await supabase.rpc('recompute_portfolio', {
+    p_portfolio_id: portfolioId,
+  })
+  if (error) throw error
+}
