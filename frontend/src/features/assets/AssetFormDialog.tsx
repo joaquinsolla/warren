@@ -1,10 +1,5 @@
 import * as React from 'react'
-import {
-  CheckCircle2Icon,
-  ChevronDownIcon,
-  CircleAlertIcon,
-  Trash2Icon,
-} from 'lucide-react'
+import { ChevronDownIcon, CircleAlertIcon, Trash2Icon } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -251,13 +246,6 @@ export function AssetFormDialog({
                   spellCheck={false}
                 />
               </div>
-              {iconDomain.trim() && domainLooksValid && (
-                <p className="text-muted-foreground flex items-center gap-1 text-xs">
-                  <CheckCircle2Icon className="text-positive size-3.5" />
-                  Vista previa del icono a la izquierda. Si no aparece, se usará
-                  la inicial.
-                </p>
-              )}
               {iconDomain.trim() && !domainLooksValid && (
                 <p className="text-muted-foreground flex items-center gap-1 text-xs">
                   <CircleAlertIcon className="size-3.5" />
