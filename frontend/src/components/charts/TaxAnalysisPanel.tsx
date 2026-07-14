@@ -56,6 +56,10 @@ export function TaxAnalysisPanel({
 
   const totalNet = rows.reduce((s, r) => s + r.netGain, 0)
   const totalTax = rows.reduce((s, r) => s + r.tax, 0)
+  const totalTaxedGain = rows.reduce(
+    (s, r) => s + (r.netGain > 0 ? r.netGain : 0),
+    0,
+  )
   const fiscalDiffers = (regime.fiscalYearStartMonth ?? 1) !== 1
   const currencyMismatch = regime.currency !== currency
 
@@ -149,8 +153,8 @@ export function TaxAnalysisPanel({
                     {formatMoney(totalTax, currency)}
                   </td>
                   <td className="px-3 py-2 text-right tabular-nums">
-                    {totalNet > 0
-                      ? `${((totalTax / totalNet) * 100).toFixed(1)}%`
+                    {totalTaxedGain > 0
+                      ? `${((totalTax / totalTaxedGain) * 100).toFixed(1)}%`
                       : '—'}
                   </td>
                 </tr>

@@ -1,20 +1,6 @@
 import * as React from 'react'
-import { BanIcon, CheckIcon } from 'lucide-react'
+import { BanIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-/** Paleta de acentos preestablecidos (estilo Trade Republic). */
-export const COLOR_PRESETS = [
-  '#00C46F',
-  '#0A84FF',
-  '#5E5CE6',
-  '#BF5AF2',
-  '#FF375F',
-  '#FF9F0A',
-  '#FFD60A',
-  '#64D2FF',
-  '#30D158',
-  '#8E8E93',
-]
 
 type ColorPickerProps = {
   value: string | null
@@ -30,7 +16,6 @@ function normalizeHex(input: string): string | null {
 }
 
 export function ColorPicker({ value, onChange }: ColorPickerProps) {
-  const isCustom = Boolean(value) && !COLOR_PRESETS.includes(value as string)
   const [hexText, setHexText] = React.useState(value ?? '')
 
   React.useEffect(() => {
@@ -50,51 +35,32 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="space-y-1">
+      <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={() => onChange(null)}
           aria-label="Sin color"
           aria-pressed={value === null}
           className={cn(
-            'flex size-7 items-center justify-center rounded-full border transition-transform hover:scale-110',
+            'flex size-8 shrink-0 items-center justify-center rounded-full border transition-transform hover:scale-110',
             value === null &&
               'ring-ring ring-2 ring-offset-2 ring-offset-background',
           )}
         >
-          <BanIcon className="text-muted-foreground size-3.5" />
+          <BanIcon className="text-muted-foreground size-4" />
         </button>
-
-        {COLOR_PRESETS.map((color) => (
-          <button
-            key={color}
-            type="button"
-            onClick={() => onChange(color)}
-            aria-label={`Color ${color}`}
-            aria-pressed={value === color}
-            style={{ backgroundColor: color }}
-            className={cn(
-              'flex size-7 items-center justify-center rounded-full transition-transform hover:scale-110',
-              value === color &&
-                'ring-ring ring-2 ring-offset-2 ring-offset-background',
-            )}
-          >
-            {value === color && (
-              <CheckIcon className="size-3.5 text-white drop-shadow" />
-            )}
-          </button>
-        ))}
 
         <label
           className={cn(
-            'relative flex size-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-transform hover:scale-110',
-            isCustom && 'ring-ring ring-2 ring-offset-2 ring-offset-background',
+            'relative flex size-8 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border transition-transform hover:scale-110',
+            value !== null &&
+              'ring-ring ring-2 ring-offset-2 ring-offset-background',
           )}
-          style={isCustom ? { backgroundColor: value as string } : undefined}
+          style={value !== null ? { backgroundColor: value } : undefined}
           aria-label="Selector de color"
         >
-          {!isCustom && (
+          {value === null && (
             <span
               className="size-full"
               style={{
@@ -110,9 +76,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             className="absolute inset-0 cursor-pointer opacity-0"
           />
         </label>
-      </div>
 
-      <div className="space-y-1">
         <input
           type="text"
           value={hexText}
@@ -127,10 +91,10 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
               'border-destructive focus-visible:ring-destructive/20',
           )}
         />
-        {hexInvalid && (
-          <p className="text-destructive text-xs">Código hex no válido.</p>
-        )}
       </div>
+      {hexInvalid && (
+        <p className="text-destructive text-xs">Código hex no válido.</p>
+      )}
     </div>
   )
 }

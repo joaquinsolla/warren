@@ -1,5 +1,10 @@
 import * as React from 'react'
-import { CheckCircle2Icon, CircleAlertIcon, Trash2Icon } from 'lucide-react'
+import {
+  CheckCircle2Icon,
+  ChevronDownIcon,
+  CircleAlertIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -55,6 +60,7 @@ export function AssetFormDialog({
   const [color, setColor] = React.useState<string | null>(null)
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
   const [deleteOpen, setDeleteOpen] = React.useState(false)
+  const [advancedOpen, setAdvancedOpen] = React.useState(false)
 
   const cleanDomain = normalizeDomain(iconDomain)
   const domainLooksValid =
@@ -72,6 +78,7 @@ export function AssetFormDialog({
     setIconDomain(asset?.icon_domain ?? '')
     setColor(asset?.color ?? null)
     setErrorMsg(null)
+    setAdvancedOpen(Boolean(asset?.isin || asset?.exchange))
   }, [open, asset, profile?.base_currency])
 
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -132,55 +139,44 @@ export function AssetFormDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex items-center gap-3">
-              <span style={brandStyle(color)}>
-                <BrandIcon
-                  name={trimmedName || trimmedSymbol || '?'}
-                  domain={cleanDomain}
-                  className={
-                    color ? 'bg-brand text-brand-foreground' : undefined
-                  }
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={assetType}
+                  onValueChange={(v) => setAssetType(v as AssetType)}
+                  disabled={isEdit}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ASSET_TYPE_ORDER.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {ASSET_TYPE_LABELS[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {isEdit && (
+                  <p className="text-muted-foreground text-xs">
+                    El tipo no se puede cambiar.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="asset-symbol">Símbolo</Label>
+                <Input
+                  id="asset-symbol"
+                  value={symbol}
+                  onChange={(e) => setSymbol(e.target.value)}
+                  placeholder="AAPL, BTC, VWCE…"
+                  autoFocus
+                  autoCapitalize="characters"
+                  spellCheck={false}
+                  maxLength={24}
+                  className="uppercase"
                 />
-              </span>
-              <div className="grid flex-1 grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="asset-symbol">Símbolo</Label>
-                  <Input
-                    id="asset-symbol"
-                    value={symbol}
-                    onChange={(e) => setSymbol(e.target.value)}
-                    placeholder="AAPL, BTC, VWCE…"
-                    autoFocus
-                    autoCapitalize="characters"
-                    spellCheck={false}
-                    maxLength={24}
-                    className="uppercase"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Tipo</Label>
-                  <Select
-                    value={assetType}
-                    onValueChange={(v) => setAssetType(v as AssetType)}
-                    disabled={isEdit}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ASSET_TYPE_ORDER.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {ASSET_TYPE_LABELS[t]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {isEdit && (
-                    <p className="text-muted-foreground text-xs">
-                      El tipo no se puede cambiar.
-                    </p>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -228,56 +224,33 @@ export function AssetFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="asset-exchange">
-                Mercado{' '}
-                <span className="text-muted-foreground font-normal">
-                  (opcional)
-                </span>
-              </Label>
-              <Input
-                id="asset-exchange"
-                value={exchange}
-                onChange={(e) => setExchange(e.target.value)}
-                placeholder="NASDAQ, XETRA…"
-                maxLength={40}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="asset-isin">
-                ISIN{' '}
-                <span className="text-muted-foreground font-normal">
-                  (opcional)
-                </span>
-              </Label>
-              <Input
-                id="asset-isin"
-                value={isin}
-                onChange={(e) => setIsin(e.target.value)}
-                placeholder="US0378331005"
-                autoCapitalize="characters"
-                spellCheck={false}
-                maxLength={12}
-                className="uppercase"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="asset-icon">
-                Dominio de la web{' '}
+                Icono de la web{' '}
                 <span className="text-muted-foreground font-normal">
                   (opcional)
                 </span>
               </Label>
-              <Input
-                id="asset-icon"
-                value={iconDomain}
-                onChange={(e) => setIconDomain(e.target.value)}
-                placeholder="apple.com, nvidia.com, bitcoin.org…"
-                inputMode="url"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <div className="flex items-center gap-3">
+                <span style={brandStyle(color)}>
+                  <BrandIcon
+                    name={trimmedName || trimmedSymbol || '?'}
+                    domain={cleanDomain}
+                    className={
+                      color ? 'bg-brand text-brand-foreground' : undefined
+                    }
+                  />
+                </span>
+                <Input
+                  id="asset-icon"
+                  className="flex-1"
+                  value={iconDomain}
+                  onChange={(e) => setIconDomain(e.target.value)}
+                  placeholder="apple.com, nvidia.com, bitcoin.org…"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </div>
               {iconDomain.trim() && domainLooksValid && (
                 <p className="text-muted-foreground flex items-center gap-1 text-xs">
                   <CheckCircle2Icon className="text-positive size-3.5" />
@@ -291,12 +264,6 @@ export function AssetFormDialog({
                   Escribe un dominio válido, p. ej. <code>apple.com</code>.
                 </p>
               )}
-              {!iconDomain.trim() && (
-                <p className="text-muted-foreground text-xs">
-                  Se toma el icono del sitio web (vía DuckDuckGo). Si se deja
-                  vacío se usa la inicial del símbolo.
-                </p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -307,6 +274,60 @@ export function AssetFormDialog({
                 </span>
               </Label>
               <ColorPicker value={color} onChange={setColor} />
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdvancedOpen((v) => !v)}
+                className="text-muted-foreground -ml-2"
+              >
+                <ChevronDownIcon
+                  className={`size-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`}
+                />
+                Avanzado
+              </Button>
+
+              {advancedOpen && (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="asset-exchange">
+                      Mercado{' '}
+                      <span className="text-muted-foreground font-normal">
+                        (opcional)
+                      </span>
+                    </Label>
+                    <Input
+                      id="asset-exchange"
+                      value={exchange}
+                      onChange={(e) => setExchange(e.target.value)}
+                      placeholder="NASDAQ, XETRA…"
+                      maxLength={40}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="asset-isin">
+                      ISIN{' '}
+                      <span className="text-muted-foreground font-normal">
+                        (opcional)
+                      </span>
+                    </Label>
+                    <Input
+                      id="asset-isin"
+                      value={isin}
+                      onChange={(e) => setIsin(e.target.value)}
+                      placeholder="US0378331005"
+                      autoCapitalize="characters"
+                      spellCheck={false}
+                      maxLength={12}
+                      className="uppercase"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}

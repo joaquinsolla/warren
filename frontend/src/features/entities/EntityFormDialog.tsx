@@ -110,29 +110,6 @@ export function EntityFormDialog({
               </DialogDescription>
             </DialogHeader>
 
-            <div className="flex items-center gap-3">
-              <span style={brandStyle(color)}>
-                <BrandIcon
-                  name={trimmedName || '?'}
-                  domain={cleanDomain}
-                  className={
-                    color ? 'bg-brand text-brand-foreground' : undefined
-                  }
-                />
-              </span>
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="entity-name">Nombre</Label>
-                <Input
-                  id="entity-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="BBVA, Trade Republic…"
-                  autoFocus
-                  maxLength={80}
-                />
-              </div>
-            </div>
-
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Tipo</Label>
@@ -174,21 +151,45 @@ export function EntityFormDialog({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="entity-name">Nombre</Label>
+              <Input
+                id="entity-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="BBVA, Trade Republic…"
+                autoFocus
+                maxLength={80}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="entity-icon">
-                Dominio de la web{' '}
+                Icono de la web{' '}
                 <span className="text-muted-foreground font-normal">
                   (opcional)
                 </span>
               </Label>
-              <Input
-                id="entity-icon"
-                value={iconDomain}
-                onChange={(e) => setIconDomain(e.target.value)}
-                placeholder="bbva.com, traderepublic.com, revolut.com…"
-                inputMode="url"
-                autoCapitalize="none"
-                spellCheck={false}
-              />
+              <div className="flex items-center gap-3">
+                <span style={brandStyle(color)}>
+                  <BrandIcon
+                    name={trimmedName || '?'}
+                    domain={cleanDomain}
+                    className={
+                      color ? 'bg-brand text-brand-foreground' : undefined
+                    }
+                  />
+                </span>
+                <Input
+                  id="entity-icon"
+                  className="flex-1"
+                  value={iconDomain}
+                  onChange={(e) => setIconDomain(e.target.value)}
+                  placeholder="bbva.com, traderepublic.com, revolut.com…"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  spellCheck={false}
+                />
+              </div>
               {iconDomain.trim() && domainLooksValid && (
                 <p className="text-muted-foreground flex items-center gap-1 text-xs">
                   <CheckCircle2Icon className="text-positive size-3.5" />
@@ -200,12 +201,6 @@ export function EntityFormDialog({
                 <p className="text-muted-foreground flex items-center gap-1 text-xs">
                   <CircleAlertIcon className="size-3.5" />
                   Escribe un dominio válido, p. ej. <code>bbva.com</code>.
-                </p>
-              )}
-              {!iconDomain.trim() && (
-                <p className="text-muted-foreground text-xs">
-                  Se toma el icono del sitio web (vía DuckDuckGo). Si se deja
-                  vacío se usa la inicial del nombre.
                 </p>
               )}
             </div>
