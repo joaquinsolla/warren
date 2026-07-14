@@ -14,14 +14,19 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { formatMoney } from '@/lib/currencies'
-import { buildRateMap, convertToBase, sumToBase } from '@/lib/fx'
+import {
+  buildDatedRateMap,
+  buildRateMap,
+  convertToBase,
+  sumToBase,
+} from '@/lib/fx'
 import { useProfile } from '@/features/profile/hooks'
 import { useEntities } from '@/features/entities/hooks'
 import { useAllAssets } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
 import { useCashTransactions } from '@/features/cash/hooks'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
-import { useFxRates } from '@/features/fx/hooks'
+import { useFxRates, useFxRateHistory } from '@/features/fx/hooks'
 import { useObjectives } from '@/features/objectives/hooks'
 import { isObjectiveMet } from '@/features/objectives/status'
 import {
@@ -66,6 +71,7 @@ export function PortfolioSummary({
     entityIds,
   )
   const { data: rates = [] } = useFxRates()
+  const { data: fxHistory = [] } = useFxRateHistory()
   const { data: objectives = [] } = useObjectives(portfolioId)
   const navigate = useNavigate()
 
@@ -79,6 +85,10 @@ export function PortfolioSummary({
     [entities],
   )
   const rateMap = React.useMemo(() => buildRateMap(rates), [rates])
+  const datedRates = React.useMemo(
+    () => buildDatedRateMap(rates, fxHistory),
+    [rates, fxHistory],
+  )
 
   const colorOf = React.useMemo(() => {
     const map = new Map<string, string>()
@@ -156,9 +166,10 @@ export function PortfolioSummary({
         invTxs,
         base,
         rateMap,
+        dated: datedRates,
         revaluations,
       }),
-    [entities, cashTxs, invTxs, base, rateMap, revaluations],
+    [entities, cashTxs, invTxs, base, rateMap, datedRates, revaluations],
   )
 
   const markers = React.useMemo(

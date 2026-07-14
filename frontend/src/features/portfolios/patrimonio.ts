@@ -1,4 +1,9 @@
-import { convertToBase, type RateMap } from '@/lib/fx'
+import {
+  convertToBase,
+  convertToBaseAt,
+  type DatedRateMap,
+  type RateMap,
+} from '@/lib/fx'
 import type { Entity } from '@/features/entities/api'
 import type { Holding } from '@/features/holdings/api'
 import type { CashTransaction } from '@/features/cash/api'
@@ -26,13 +31,19 @@ export function buildPatrimonioTimeline(params: {
   base: string
   rateMap: RateMap
   /**
+   * Tipos de cambio datados. Si se proporciona, cada punto de la timeline se
+   * valora con el tipo vigente en su fecha (histórico). Si se omite, se usa
+   * `rateMap` (tipo actual) para todas las fechas.
+   */
+  dated?: DatedRateMap
+  /**
    * Revaluaciones por precios manuales: cada una aporta un `delta` (valor
    * estimado − coste, en base) en el instante `at` del ajuste. Se dibujan como
    * escalones al final de la serie, dejando la parte histórica a coste intacta.
    */
   revaluations?: { at: number; delta: number }[]
 }): TimelinePoint[] {
-  const { entities, cashTxs, invTxs, base, rateMap } = params
+  const { entities, cashTxs, invTxs, base, rateMap, dated } = params
   const curOf = new Map(entities.map((e) => [e.id, e.currency]))
 
   const cash = new Map<string, number>()
@@ -96,11 +107,17 @@ export function buildPatrimonioTimeline(params: {
 
   events.sort((a, b) => a.t - b.t || a.seq - b.seq)
 
-  const total = () => {
+  const total = (at: number) => {
     let sum = 0
     for (const [eid, cur] of curOf) {
-      const c = convertToBase(cash.get(eid) ?? 0, cur, base, rateMap)
-      const i = convertToBase(invested.get(eid) ?? 0, cur, base, rateMap)
+      const c =
+        dated !== undefined
+          ? convertToBaseAt(cash.get(eid) ?? 0, cur, base, at, dated)
+          : convertToBase(cash.get(eid) ?? 0, cur, base, rateMap)
+      const i =
+        dated !== undefined
+          ? convertToBaseAt(invested.get(eid) ?? 0, cur, base, at, dated)
+          : convertToBase(invested.get(eid) ?? 0, cur, base, rateMap)
       if (c !== null) sum += c
       if (i !== null) sum += i
     }
@@ -110,7 +127,7 @@ export function buildPatrimonioTimeline(params: {
   const points: TimelinePoint[] = []
   for (const ev of events) {
     ev.apply()
-    const value = total()
+    const value = total(ev.t)
     const last = points[points.length - 1]
     // Colapsa eventos del mismo instante en un único punto (el estado final).
     if (last && last.t === ev.t) last.value = value

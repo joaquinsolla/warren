@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { SearchIcon, Trash2Icon } from 'lucide-react'
+import { HistoryIcon, SearchIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,6 +9,7 @@ import {
   useFxRates,
   useUpsertFxRate,
 } from '@/features/fx/hooks'
+import { FxRateHistoryDialog } from '@/features/fx/FxRateHistoryDialog'
 
 type FxRatesManagerProps = {
   base: string
@@ -43,6 +44,9 @@ export function FxRatesManager({
   const [editing, setEditing] = React.useState<Set<string>>(new Set())
   const [query, setQuery] = React.useState('')
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null)
+  const [historyCurrency, setHistoryCurrency] = React.useState<string | null>(
+    null,
+  )
 
   React.useEffect(() => {
     const initial: Record<string, string> = {}
@@ -155,6 +159,15 @@ export function FxRatesManager({
                 >
                   {isEditing ? 'Guardar' : 'Editar'}
                 </Button>
+                <Button
+                  type="button"
+                  size="icon-sm"
+                  variant="ghost"
+                  aria-label={`Historial de ${currency}`}
+                  onClick={() => setHistoryCurrency(currency)}
+                >
+                  <HistoryIcon className="size-4" />
+                </Button>
                 {existing && (
                   <Button
                     type="button"
@@ -178,6 +191,15 @@ export function FxRatesManager({
       </div>
 
       {errorMsg && <p className="text-destructive text-sm">{errorMsg}</p>}
+
+      {historyCurrency && (
+        <FxRateHistoryDialog
+          open={historyCurrency !== null}
+          onOpenChange={(o) => !o && setHistoryCurrency(null)}
+          currency={historyCurrency}
+          base={base}
+        />
+      )}
     </div>
   )
 }
