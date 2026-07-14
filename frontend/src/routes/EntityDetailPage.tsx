@@ -6,6 +6,7 @@ import {
   ArrowRightLeftIcon,
   ArrowUpRightIcon,
   ChartPieIcon,
+  FileDownIcon,
   PlusIcon,
   ReceiptTextIcon,
   SlidersHorizontalIcon,
@@ -46,6 +47,13 @@ import { RealizedPnLPanel } from '@/components/charts/RealizedPnLPanel'
 import { TaxAnalysisPanel } from '@/components/charts/TaxAnalysisPanel'
 import { LatentTaxPanel } from '@/components/charts/LatentTaxPanel'
 import { useProfile } from '@/features/profile/hooks'
+import { useObjectives } from '@/features/objectives/hooks'
+import { useFxRates, useFxRateHistory } from '@/features/fx/hooks'
+import { buildEntityReportData } from '@/features/reports/buildReportData'
+import {
+  reportFilename,
+  useGenerateReport,
+} from '@/features/reports/useGenerateReport'
 const TYPE_ICON: Record<
   CashTransactionType,
   React.ComponentType<{ className?: string }>
@@ -74,6 +82,10 @@ export function EntityDetailPage() {
   const { data: cashTxs = [] } = useCashTransactions(portfolioId)
   const { data: assets = [] } = useAllAssets()
   const { data: profile } = useProfile()
+  const { data: objectives = [] } = useObjectives(portfolioId)
+  const { data: rates = [] } = useFxRates()
+  const { data: fxHistory = [] } = useFxRateHistory()
+  const { generate, isGenerating } = useGenerateReport()
 
   const isBroker = entity?.type === 'BROKER'
   const brokerIds = React.useMemo(() => (id ? [id] : []), [id])
@@ -306,14 +318,46 @@ export function EntityDetailPage() {
                   Análisis
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 sm:flex-none"
+                disabled={isGenerating}
+                onClick={() =>
+                  generate(
+                    () =>
+                      buildEntityReportData(
+                        {
+                          entities: allEntities,
+                          holdings,
+                          assets,
+                          cashTxs,
+                          invTxs: investmentTxs,
+                          rates,
+                          fxHistory,
+                          objectives,
+                          base: profile?.base_currency ?? entity.currency,
+                          taxRegime: profile?.tax_regime ?? 'ES',
+                        },
+                        entity.id,
+                      ),
+                    reportFilename(entity.name),
+                  )
+                }
+              >
+                <FileDownIcon className="size-4" />
+                {isGenerating ? 'Generando…' : 'Informe'}
+              </Button>
             </div>
           </div>
 
-          <GrowthChart
-            points={timeline}
-            base={entity.currency}
-            markers={markers}
-          />
+          <div className="border-t pt-6">
+            <GrowthChart
+              points={timeline}
+              base={entity.currency}
+              markers={markers}
+            />
+          </div>
         </section>
 
         {isBroker && (

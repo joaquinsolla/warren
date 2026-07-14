@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import {
   ChartPieIcon,
   ClockIcon,
+  FileDownIcon,
   TargetIcon,
   TriangleAlertIcon,
 } from 'lucide-react'
@@ -36,6 +37,11 @@ import {
 import { GrowthChart } from '@/components/charts/GrowthChart'
 import { DonutChart } from '@/components/charts/DonutChart'
 import { CategoryDonut } from '@/components/charts/CategoryDonut'
+import { buildGlobalReportData } from '@/features/reports/buildReportData'
+import {
+  reportFilename,
+  useGenerateReport,
+} from '@/features/reports/useGenerateReport'
 
 const FALLBACK_PALETTE = [
   '#6366f1',
@@ -79,6 +85,7 @@ export function PortfolioSummary({
   const [analysisView, setAnalysisView] = React.useState<'entity' | 'liquid'>(
     'entity',
   )
+  const { generate, isGenerating } = useGenerateReport()
 
   const entityMap = React.useMemo(
     () => new Map(entities.map((e) => [e.id, e])),
@@ -288,6 +295,37 @@ export function PortfolioSummary({
               <ChartPieIcon className="size-4" />
               Análisis
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 sm:flex-none"
+              disabled={isGenerating}
+              onClick={() =>
+                generate(
+                  () =>
+                    buildGlobalReportData(
+                      {
+                        entities,
+                        holdings,
+                        assets,
+                        cashTxs,
+                        invTxs,
+                        rates,
+                        fxHistory,
+                        objectives,
+                        base,
+                        taxRegime: profile?.tax_regime ?? 'ES',
+                      },
+                      title,
+                      description ?? null,
+                    ),
+                  reportFilename(title),
+                )
+              }
+            >
+              <FileDownIcon className="size-4" />
+              {isGenerating ? 'Generando…' : 'Informe'}
+            </Button>
           </div>
         </div>
 
@@ -305,7 +343,9 @@ export function PortfolioSummary({
           </div>
         )}
 
-        <GrowthChart points={timeline} base={base} markers={markers} />
+        <div className="border-t pt-6">
+          <GrowthChart points={timeline} base={base} markers={markers} />
+        </div>
       </section>
 
       <Dialog open={analysisOpen} onOpenChange={setAnalysisOpen}>
