@@ -14,7 +14,10 @@ import {
 } from '@/features/assets/hooks'
 import { AssetFormDialog } from '@/features/assets/AssetFormDialog'
 import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
-import { ASSET_TYPE_LABELS } from '@/features/assets/labels'
+import {
+  ASSET_TYPE_LABELS,
+  ASSET_TYPE_LABELS_SINGULAR,
+} from '@/features/assets/labels'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useEntities } from '@/features/entities/hooks'
@@ -143,7 +146,9 @@ export function AssetDetailPage() {
                 disabled={Boolean(asset.deleted_at)}
               />
             </h1>
-            <p className="text-muted-foreground text-sm">{asset.name}</p>
+            <p className="text-muted-foreground text-sm">
+              {ASSET_TYPE_LABELS_SINGULAR[asset.asset_type]} · {asset.name}
+            </p>
           </div>
           <div className="flex shrink-0 gap-2">
             <Button

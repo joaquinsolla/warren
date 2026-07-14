@@ -1,6 +1,5 @@
 import * as React from 'react'
-import { Link } from 'react-router-dom'
-import { LayersIcon, PlusIcon, WalletIcon } from 'lucide-react'
+import { PlusIcon, WalletIcon } from 'lucide-react'
 import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { Button } from '@/components/ui/button'
 import { PortfolioFormDialog } from '@/features/portfolios/PortfolioFormDialog'
@@ -38,22 +37,6 @@ export function DashboardPage() {
           />
           <EntitiesSection portfolioId={currentPortfolio.id} />
           <HoldingsSection portfolioId={currentPortfolio.id} />
-
-          <Link
-            to="/assets"
-            className="bg-card hover:bg-muted/50 flex items-center gap-3 rounded-xl border p-4"
-          >
-            <div className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-full">
-              <LayersIcon className="size-5" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">Activos</p>
-              <p className="text-muted-foreground text-xs">
-                Gestiona tu catálogo: acciones, ETFs, cripto y más.
-              </p>
-            </div>
-            <span className="text-muted-foreground text-sm">Gestionar →</span>
-          </Link>
         </section>
       )}
 

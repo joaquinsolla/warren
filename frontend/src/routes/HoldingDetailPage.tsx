@@ -110,6 +110,7 @@ export function HoldingDetailPage() {
               )}
             </h1>
             <p className="text-muted-foreground text-sm">
+              Posición ·{' '}
               {entity ? (
                 <Link to={`/entities/${entity.id}`} className="hover:underline">
                   {entity.name}

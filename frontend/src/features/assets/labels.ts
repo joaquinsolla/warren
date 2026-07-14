@@ -12,6 +12,19 @@ export const ASSET_TYPE_LABELS: Record<AssetType, string> = {
   OTHER: 'Otros',
 }
 
+/** Etiqueta en singular, para describir un activo concreto. */
+export const ASSET_TYPE_LABELS_SINGULAR: Record<AssetType, string> = {
+  STOCK: 'Acción',
+  ETF: 'ETF',
+  INDEX: 'Índice',
+  CRYPTO: 'Criptomoneda',
+  BOND: 'Bono',
+  FUND: 'Fondo',
+  COMMODITY: 'Materia prima',
+  FOREX: 'Divisa',
+  OTHER: 'Otro',
+}
+
 export const ASSET_TYPE_ORDER: AssetType[] = [
   'STOCK',
   'ETF',

@@ -6,6 +6,7 @@ import { useCurrentPortfolio } from '@/hooks/useCurrentPortfolio'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { PortfolioSwitcher } from '@/features/portfolios/PortfolioSwitcher'
+import { SettingsMenu } from '@/features/settings/SettingsMenu'
 
 /** Al navegar a una nueva ruta (no en atrás/adelante) vuelve arriba del todo. */
 function ScrollToTop() {
@@ -36,6 +37,7 @@ export function AppLayout() {
           </div>
           <div className="flex items-center gap-1">
             <ThemeToggle />
+            {currentPortfolio && <SettingsMenu />}
             <Button
               variant="ghost"
               size="icon"

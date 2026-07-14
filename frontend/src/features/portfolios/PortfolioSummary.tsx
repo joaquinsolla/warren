@@ -1,10 +1,6 @@
 import * as React from 'react'
-import {
-  ChartPieIcon,
-  RefreshCwIcon,
-  SettingsIcon,
-  TriangleAlertIcon,
-} from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ChartPieIcon, TriangleAlertIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -21,8 +17,6 @@ import { useHoldings } from '@/features/holdings/hooks'
 import { useCashTransactions } from '@/features/cash/hooks'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
 import { useFxRates } from '@/features/fx/hooks'
-import { FxRatesDialog } from '@/features/fx/FxRatesDialog'
-import { PriceUpdateDialog } from '@/features/assets/PriceUpdateDialog'
 import {
   buildDistribution,
   buildPatrimonioTimeline,
@@ -66,9 +60,10 @@ export function PortfolioSummary({
   )
   const { data: rates = [] } = useFxRates()
 
-  const [ratesOpen, setRatesOpen] = React.useState(false)
   const [analysisOpen, setAnalysisOpen] = React.useState(false)
-  const [pricesOpen, setPricesOpen] = React.useState(false)
+  const [analysisView, setAnalysisView] = React.useState<'entity' | 'liquid'>(
+    'entity',
+  )
 
   const entityMap = React.useMemo(
     () => new Map(entities.map((e) => [e.id, e])),
@@ -144,11 +139,6 @@ export function PortfolioSummary({
     return out
   }, [assets, holdings, entityMap, base, rateMap])
 
-  const neededCurrencies = React.useMemo(
-    () => [...new Set(entities.map((e) => e.currency))],
-    [entities],
-  )
-
   const timeline = React.useMemo(
     () =>
       buildPatrimonioTimeline({
@@ -180,26 +170,6 @@ export function PortfolioSummary({
           {description && (
             <p className="text-muted-foreground">{description}</p>
           )}
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 sm:flex-none"
-            onClick={() => setPricesOpen(true)}
-          >
-            <RefreshCwIcon className="size-4" />
-            Actualizar precios
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex-1 sm:flex-none"
-            onClick={() => setRatesOpen(true)}
-          >
-            <SettingsIcon className="size-4" />
-            Tipos de cambio
-          </Button>
         </div>
       </div>
 
@@ -236,13 +206,9 @@ export function PortfolioSummary({
             <span>
               Faltan tipos de cambio para: {missing.join(', ')}. Esos importes
               no se incluyen en el total.{' '}
-              <button
-                type="button"
-                className="underline underline-offset-2"
-                onClick={() => setRatesOpen(true)}
-              >
+              <Link to="/fx" className="underline underline-offset-2">
                 Añádelos
-              </button>
+              </Link>
               .
             </span>
           </div>
@@ -257,10 +223,37 @@ export function PortfolioSummary({
             <DialogTitle>Análisis del patrimonio</DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
-            <div>
-              <p className="text-muted-foreground mb-4 text-xs">
-                Líquido vs inversiones
-              </p>
+            <div className="flex gap-1">
+              {(
+                [
+                  { key: 'entity', label: 'Distribución por entidad' },
+                  { key: 'liquid', label: 'Líquido vs Inversiones' },
+                ] as const
+              ).map((v) => (
+                <button
+                  key={v.key}
+                  type="button"
+                  onClick={() => setAnalysisView(v.key)}
+                  className={
+                    'rounded-md px-3 py-1.5 text-xs font-medium transition-colors ' +
+                    (analysisView === v.key
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-muted/50')
+                  }
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+
+            {analysisView === 'entity' ? (
+              <DonutChart
+                segments={distribution.segments}
+                total={distribution.total}
+                base={base}
+                colorOf={colorOf}
+              />
+            ) : (
               <CategoryDonut
                 base={base}
                 slices={[
@@ -272,35 +265,10 @@ export function PortfolioSummary({
                   },
                 ]}
               />
-            </div>
-            <div className="border-t pt-6">
-              <p className="text-muted-foreground mb-4 text-xs">
-                Distribución por entidad
-              </p>
-              <DonutChart
-                segments={distribution.segments}
-                total={distribution.total}
-                base={base}
-                colorOf={colorOf}
-              />
-            </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>
-
-      <FxRatesDialog
-        open={ratesOpen}
-        onOpenChange={setRatesOpen}
-        base={base}
-        neededCurrencies={neededCurrencies}
-      />
-
-      <PriceUpdateDialog
-        open={pricesOpen}
-        onOpenChange={setPricesOpen}
-        portfolioId={portfolioId}
-        base={base}
-      />
     </div>
   )
 }

@@ -10,6 +10,8 @@ import { AuthCallbackPage } from '@/routes/AuthCallbackPage'
 import { AppLayout } from '@/routes/AppLayout'
 import { DashboardPage } from '@/routes/DashboardPage'
 import { AssetsPage } from '@/routes/AssetsPage'
+import { FxRatesPage } from '@/routes/FxRatesPage'
+import { PricesPage } from '@/routes/PricesPage'
 import { EntityDetailPage } from '@/routes/EntityDetailPage'
 import { HoldingDetailPage } from '@/routes/HoldingDetailPage'
 import { CashTransactionDetailPage } from '@/routes/CashTransactionDetailPage'
@@ -37,6 +39,8 @@ function App() {
           >
             <Route path="/" element={<DashboardPage />} />
             <Route path="/assets" element={<AssetsPage />} />
+            <Route path="/fx" element={<FxRatesPage />} />
+            <Route path="/prices" element={<PricesPage />} />
             <Route path="/entities/:id" element={<EntityDetailPage />} />
             <Route path="/holdings/:id" element={<HoldingDetailPage />} />
             <Route path="/cash/:id" element={<CashTransactionDetailPage />} />

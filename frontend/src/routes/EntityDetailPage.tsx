@@ -30,6 +30,7 @@ import type { CashTransactionType } from '@/features/cash/api'
 import { useAllAssets } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
 import { HoldingCard } from '@/features/holdings/HoldingCard'
+import { groupByAssetType } from '@/features/assets/grouping'
 import { useInvestmentTransactions } from '@/features/investments/hooks'
 import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
 import {
@@ -105,6 +106,11 @@ export function EntityDetailPage() {
   const assetMap = React.useMemo(
     () => new Map(assets.map((a) => [a.id, a])),
     [assets],
+  )
+  const holdingGroups = React.useMemo(
+    () =>
+      groupByAssetType(holdings, (h) => assetMap.get(h.asset_id)?.asset_type),
+    [holdings, assetMap],
   )
 
   const entityCash = React.useMemo(
@@ -283,10 +289,10 @@ export function EntityDetailPage() {
                   variant="outline"
                   size="sm"
                   className="flex-1 sm:flex-none"
-                  onClick={() => setAnalysisOpen(true)}
+                  onClick={() => setTaxOpen(true)}
                 >
-                  <ChartPieIcon className="size-4" />
-                  Análisis
+                  <ReceiptTextIcon className="size-4" />
+                  Impuestos
                 </Button>
               )}
               {isBroker && (
@@ -294,10 +300,10 @@ export function EntityDetailPage() {
                   variant="outline"
                   size="sm"
                   className="flex-1 sm:flex-none"
-                  onClick={() => setTaxOpen(true)}
+                  onClick={() => setAnalysisOpen(true)}
                 >
-                  <ReceiptTextIcon className="size-4" />
-                  Impuestos
+                  <ChartPieIcon className="size-4" />
+                  Análisis
                 </Button>
               )}
             </div>
@@ -330,17 +336,24 @@ export function EntityDetailPage() {
                 Sin posiciones abiertas en este bróker.
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {holdings.map((h) => (
-                  <HoldingCard
-                    key={h.id}
-                    holding={h}
-                    asset={assetMap.get(h.asset_id)}
-                    subtitle={entity.name}
-                    currency={entity.currency}
-                  />
-                ))}
-              </div>
+              holdingGroups.map((group) => (
+                <div key={group.type} className="space-y-3">
+                  <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                    {group.label}
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {group.items.map((h) => (
+                      <HoldingCard
+                        key={h.id}
+                        holding={h}
+                        asset={assetMap.get(h.asset_id)}
+                        subtitle={entity.name}
+                        currency={entity.currency}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))
             )}
           </section>
         )}

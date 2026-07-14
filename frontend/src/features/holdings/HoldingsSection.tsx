@@ -3,6 +3,7 @@ import { useEntities } from '@/features/entities/hooks'
 import { useAllAssets } from '@/features/assets/hooks'
 import { useHoldings } from '@/features/holdings/hooks'
 import { HoldingCard } from '@/features/holdings/HoldingCard'
+import { groupByAssetType } from '@/features/assets/grouping'
 
 export function HoldingsSection({ portfolioId }: { portfolioId: string }) {
   const { data: entities = [] } = useEntities(portfolioId)
@@ -21,6 +22,12 @@ export function HoldingsSection({ portfolioId }: { portfolioId: string }) {
   const assetMap = React.useMemo(
     () => new Map(assets.map((a) => [a.id, a])),
     [assets],
+  )
+
+  const groups = React.useMemo(
+    () =>
+      groupByAssetType(holdings, (h) => assetMap.get(h.asset_id)?.asset_type),
+    [holdings, assetMap],
   )
 
   if (!isLoading && !error && holdings.length === 0) return null
@@ -42,22 +49,29 @@ export function HoldingsSection({ portfolioId }: { portfolioId: string }) {
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {holdings.map((h) => {
-          const asset = assetMap.get(h.asset_id)
-          const entity = entityMap.get(h.entity_id)
-          const currency = entity?.currency ?? 'EUR'
-          return (
-            <HoldingCard
-              key={h.id}
-              holding={h}
-              asset={asset}
-              subtitle={entity?.name ?? '—'}
-              currency={currency}
-            />
-          )
-        })}
-      </div>
+      {groups.map((group) => (
+        <div key={group.type} className="space-y-3">
+          <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+            {group.label}
+          </h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {group.items.map((h) => {
+              const asset = assetMap.get(h.asset_id)
+              const entity = entityMap.get(h.entity_id)
+              const currency = entity?.currency ?? 'EUR'
+              return (
+                <HoldingCard
+                  key={h.id}
+                  holding={h}
+                  asset={asset}
+                  subtitle={entity?.name ?? '—'}
+                  currency={currency}
+                />
+              )
+            })}
+          </div>
+        </div>
+      ))}
     </section>
   )
 }
