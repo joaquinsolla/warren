@@ -158,8 +158,8 @@ export function PortfolioSummary({
   )
 
   const distribution = React.useMemo(
-    () => buildDistribution({ entities, holdings, base, rateMap }),
-    [entities, holdings, base, rateMap],
+    () => buildDistribution({ entities, holdings, base, rateMap, priceMap }),
+    [entities, holdings, base, rateMap, priceMap],
   )
 
   return (
@@ -260,7 +260,7 @@ export function PortfolioSummary({
                   { label: 'Efectivo', value: cash.total, color: '#0ea5e9' },
                   {
                     label: 'Inversiones',
-                    value: invested.total,
+                    value: estimatedInv.total,
                     color: '#6366f1',
                   },
                 ]}

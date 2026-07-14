@@ -161,7 +161,11 @@ export function FxRatesManager({
                     size="icon-sm"
                     variant="ghost"
                     aria-label={`Eliminar tipo de ${currency}`}
-                    onClick={() => del.mutate(existing.id)}
+                    onClick={() =>
+                      del.mutate(existing.id, {
+                        onError: (err) => setErrorMsg((err as Error).message),
+                      })
+                    }
                     disabled={del.isPending}
                   >
                     <Trash2Icon className="size-4" />

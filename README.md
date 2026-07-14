@@ -186,7 +186,18 @@ del mismo usuario (scope = `user_id`, igual que `portfolios`).
 | exchange | text |
 | icon_domain | text |
 | color | text |
+| manual_price | numeric (NOT NULL) |
+| manual_price_at | timestamptz (NOT NULL) |
+| deleted_at | timestamptz nullable |
 | created_at | timestamptz |
+
+`manual_price` / `manual_price_at`: precio manual del activo (y momento en que se
+fijó) para estimar su valor de mercado y el rendimiento latente sin necesidad de
+vender. Son obligatorios: al crear un activo se registra su precio inicial.
+
+`deleted_at`: borrado **lógico** (lápida). Un activo con holdings o transacciones
+no se borra físicamente; se marca `deleted_at` y desaparece de listas y
+selectores (`deleted_at is null`), conservando el histórico.
 
 RLS: cada usuario solo puede leer, crear, editar y borrar sus propios activos
 (`user_id = auth.uid()`). Un activo no puede borrarse si tiene holdings o
@@ -641,7 +652,6 @@ Sirve para anotar el motivo/estrategia de una posición ("holdear Nvidia hasta 2
 | target_body | text nullable |
 | target_price | numeric nullable |
 | target_date | date nullable |
-| is_active | boolean |
 | created_at | timestamptz |
 | updated_at | timestamptz |
 
@@ -655,8 +665,6 @@ Debe existir al menos uno de los tres objetivos: `target_body`, `target_price` o
 - NULL: objetivo a nivel de toda la cartera.
 
 `transaction_id` opcional: enlaza el objetivo con la compra concreta que lo motivó.
-
-`is_active`: control manual para pausar/activar una tesis sin borrarla.
 
 ## Estado "cumplido"
 

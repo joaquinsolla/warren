@@ -147,22 +147,29 @@ export type DonutSegment = {
 
 /**
  * Distribución actual del patrimonio en moneda base, por entidad y separando
- * efectivo (líquido) de inversiones (a coste). Solo segmentos con valor > 0.
+ * efectivo (líquido) de inversiones. Solo segmentos con valor > 0.
+ *
+ * El valor de las inversiones usa el precio manual del activo donde exista
+ * (`priceMap`) y el coste (`invested_amount`) en las posiciones sin precio, de
+ * forma que la suma coincide con el "Patrimonio total" del resumen.
  */
 export function buildDistribution(params: {
   entities: Entity[]
   holdings: Holding[]
   base: string
   rateMap: RateMap
+  priceMap?: Map<string, number | null>
 }): { segments: DonutSegment[]; total: number } {
-  const { entities, holdings, base, rateMap } = params
+  const { entities, holdings, base, rateMap, priceMap } = params
   const curOf = new Map(entities.map((e) => [e.id, e.currency]))
 
   const investedByEntity = new Map<string, number>()
   for (const h of holdings) {
     const cur = curOf.get(h.entity_id)
     if (!cur) continue
-    const v = convertToBase(h.invested_amount, cur, base, rateMap)
+    const price = priceMap?.get(h.asset_id)
+    const localValue = price != null ? h.quantity * price : h.invested_amount
+    const v = convertToBase(localValue, cur, base, rateMap)
     if (v !== null) {
       investedByEntity.set(
         h.entity_id,
