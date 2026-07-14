@@ -82,77 +82,96 @@ export function HoldingDetailPage() {
       <BackButton />
 
       <div className="space-y-8">
-        <div className="flex items-start gap-4">
-          <span style={brandStyle(asset?.color ?? null)}>
-            <BrandIcon
-              name={asset?.symbol ?? '?'}
-              domain={asset?.icon_domain ?? null}
-              className={
-                asset?.color
-                  ? 'bg-brand text-brand-foreground size-12'
-                  : 'size-12'
-              }
-            />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {asset ? (
-                <Link to={`/assets/${asset.id}`} className="hover:underline">
-                  {asset.symbol}
-                </Link>
-              ) : (
-                '—'
-              )}
-              {asset?.deleted_at && (
-                <span className="text-muted-foreground ml-2 text-sm font-normal">
-                  · Eliminado
-                </span>
-              )}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Posición ·{' '}
-              {entity ? (
-                <Link to={`/entities/${entity.id}`} className="hover:underline">
-                  {entity.name}
-                </Link>
-              ) : (
-                '—'
-              )}
-            </p>
+        <section className="bg-card space-y-6 rounded-xl border p-6">
+          <div className="flex items-start gap-4">
+            <span style={brandStyle(asset?.color ?? null)}>
+              <BrandIcon
+                name={asset?.symbol ?? '?'}
+                domain={asset?.icon_domain ?? null}
+                className={
+                  asset?.color
+                    ? 'bg-brand text-brand-foreground size-12'
+                    : 'size-12'
+                }
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                {asset ? (
+                  <Link to={`/assets/${asset.id}`} className="hover:underline">
+                    {asset.symbol}
+                  </Link>
+                ) : (
+                  '—'
+                )}
+                {asset?.deleted_at && (
+                  <span className="text-muted-foreground ml-2 text-sm font-normal">
+                    · Eliminado
+                  </span>
+                )}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Posición ·{' '}
+                {entity ? (
+                  <Link
+                    to={`/entities/${entity.id}`}
+                    className="hover:underline"
+                  >
+                    {entity.name}
+                  </Link>
+                ) : (
+                  '—'
+                )}
+              </p>
+            </div>
+            <Button size="sm" onClick={() => setFormOpen(true)}>
+              <PlusIcon className="size-4" />
+              Operar
+            </Button>
           </div>
-          <Button size="sm" onClick={() => setFormOpen(true)}>
-            <PlusIcon className="size-4" />
-            Operar
-          </Button>
-        </div>
 
-        <dl className="bg-card rounded-xl border p-4">
-          <Field label={unitLabel(asset?.asset_type)}>{holding.quantity}</Field>
-          <Field label="Invertido (coste)">
-            {formatMoney(holding.invested_amount, currency)}
-          </Field>
-          <Field label="Precio medio">
-            {formatMoney(holding.average_price, currency)}
-          </Field>
-          {price != null && (
-            <>
-              <Field label="Precio actual">
-                {formatMoney(price, currency)}
-              </Field>
-              <Field label="Valor estimado">
-                {formatMoney(estValue!, currency)}
-              </Field>
-              <Field label="Rendimiento">
-                <span className={pnl! >= 0 ? 'text-positive' : 'text-negative'}>
-                  {pnl! >= 0 ? '+' : ''}
-                  {formatMoney(pnl!, currency)}
-                  {pnlPct != null &&
-                    ` (${pnl! >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`}
-                </span>
-              </Field>
-            </>
-          )}
-        </dl>
+          <div className="flex flex-wrap gap-x-12 gap-y-4">
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Precio actual
+              </p>
+              <p className="text-xl font-semibold tabular-nums">
+                {price != null ? formatMoney(price, currency) : '—'}
+              </p>
+            </div>
+            <div className="space-y-0.5">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                Rendimiento
+              </p>
+              <p
+                className={`text-xl font-semibold tabular-nums ${pnl == null ? '' : pnl >= 0 ? 'text-positive' : 'text-negative'}`}
+              >
+                {pnl == null ? (
+                  '—'
+                ) : (
+                  <>
+                    {pnl >= 0 ? '+' : ''}
+                    {formatMoney(pnl, currency)}
+                    {pnlPct != null &&
+                      ` (${pnl >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`}
+                  </>
+                )}
+              </p>
+            </div>
+          </div>
+
+          <dl className="border-t pt-2">
+            <Field label="Total">
+              {estValue != null ? formatMoney(estValue, currency) : '—'}
+            </Field>
+            <Field label={unitLabel(asset?.asset_type)}>
+              {holding.quantity}
+            </Field>
+            <Field label="Precio medio de compra">
+              {formatMoney(holding.average_price, currency)}
+            </Field>
+          </dl>
+        </section>
 
         {portfolioId && (
           <ObjectivesList

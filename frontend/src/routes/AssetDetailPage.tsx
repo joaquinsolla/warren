@@ -121,46 +121,57 @@ export function AssetDetailPage() {
       <BackButton />
 
       <div className="space-y-8">
-        <div className="flex items-start gap-4">
-          <span style={brandStyle(asset.color)}>
-            <BrandIcon
-              name={asset.name || asset.symbol}
-              domain={asset.icon_domain}
-              className={
-                asset.color
-                  ? 'bg-brand text-brand-foreground size-12'
-                  : 'size-12'
-              }
-            />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-              {asset.symbol}
-              {asset.deleted_at && (
-                <span className="text-muted-foreground text-sm font-normal">
-                  · Eliminado
-                </span>
-              )}
-              <EditButton
-                onClick={() => setEditOpen(true)}
-                disabled={Boolean(asset.deleted_at)}
+        <section className="bg-card space-y-6 rounded-xl border p-6">
+          <div className="flex items-start gap-4">
+            <span style={brandStyle(asset.color)}>
+              <BrandIcon
+                name={asset.name || asset.symbol}
+                domain={asset.icon_domain}
+                className={
+                  asset.color
+                    ? 'bg-brand text-brand-foreground size-12'
+                    : 'size-12'
+                }
               />
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {ASSET_TYPE_LABELS_SINGULAR[asset.asset_type]} · {asset.name}
-            </p>
+            </span>
+            <div className="min-w-0 flex-1">
+              <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                {asset.symbol}
+                {asset.deleted_at && (
+                  <span className="text-muted-foreground text-sm font-normal">
+                    · Eliminado
+                  </span>
+                )}
+                <EditButton
+                  onClick={() => setEditOpen(true)}
+                  disabled={Boolean(asset.deleted_at)}
+                />
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                {ASSET_TYPE_LABELS_SINGULAR[asset.asset_type]} · {asset.name}
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button
+                size="sm"
+                onClick={() => setInvestOpen(true)}
+                disabled={Boolean(asset.deleted_at)}
+              >
+                <PlusIcon className="size-4" />
+                Operar
+              </Button>
+            </div>
           </div>
-          <div className="flex shrink-0 gap-2">
-            <Button
-              size="sm"
-              onClick={() => setInvestOpen(true)}
-              disabled={Boolean(asset.deleted_at)}
-            >
-              <PlusIcon className="size-4" />
-              Operar
-            </Button>
-          </div>
-        </div>
+
+          <dl className="border-t pt-2">
+            <Field label="Símbolo">{asset.symbol}</Field>
+            <Field label="Nombre">{asset.name}</Field>
+            <Field label="Tipo">{ASSET_TYPE_LABELS[asset.asset_type]}</Field>
+            <Field label="Moneda">{asset.currency}</Field>
+            {asset.isin && <Field label="ISIN">{asset.isin}</Field>}
+            {asset.exchange && <Field label="Mercado">{asset.exchange}</Field>}
+          </dl>
+        </section>
 
         <div className="bg-card space-y-2 rounded-xl border p-4">
           <Label htmlFor="asset-price">Precio actual</Label>
@@ -200,15 +211,6 @@ export function AssetDetailPage() {
             </p>
           )}
         </div>
-
-        <dl className="bg-card rounded-xl border p-4">
-          <Field label="Símbolo">{asset.symbol}</Field>
-          <Field label="Nombre">{asset.name}</Field>
-          <Field label="Tipo">{ASSET_TYPE_LABELS[asset.asset_type]}</Field>
-          <Field label="Moneda">{asset.currency}</Field>
-          {asset.isin && <Field label="ISIN">{asset.isin}</Field>}
-          {asset.exchange && <Field label="Mercado">{asset.exchange}</Field>}
-        </dl>
 
         <section className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight">

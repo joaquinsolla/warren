@@ -182,6 +182,33 @@ export function PortfolioSummary({
     [entities, holdings, base, rateMap, priceMap],
   )
 
+  const metObjectivePositions = React.useMemo(() => {
+    const byKey = new Map<string, string>()
+    const byAsset = new Map<string, string>()
+    for (const h of holdings) {
+      byKey.set(`${h.asset_id}:${h.entity_id}`, h.id)
+      if (!byAsset.has(h.asset_id)) byAsset.set(h.asset_id, h.id)
+    }
+    const seen = new Map<
+      string,
+      { holdingId: string; symbol: string; entity: string | null }
+    >()
+    for (const o of objectives) {
+      if (!isObjectiveMet(o, priceMap.get(o.asset_id) ?? null)) continue
+      const holdingId = o.entity_id
+        ? byKey.get(`${o.asset_id}:${o.entity_id}`)
+        : byAsset.get(o.asset_id)
+      if (!holdingId || seen.has(holdingId)) continue
+      const a = assets.find((x) => x.id === o.asset_id)
+      if (!a) continue
+      const entity = o.entity_id
+        ? (entityMap.get(o.entity_id)?.name ?? null)
+        : null
+      seen.set(holdingId, { holdingId, symbol: a.symbol, entity })
+    }
+    return [...seen.values()]
+  }, [objectives, priceMap, assets, holdings, entityMap])
+
   const metObjectives = React.useMemo(
     () =>
       objectives.filter((o) =>
@@ -200,6 +227,33 @@ export function PortfolioSummary({
           )}
         </div>
       </div>
+
+      {metObjectives > 0 && (
+        <div className="border-positive/30 bg-positive/5 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-positive flex items-center gap-2 text-sm font-medium">
+            <TargetIcon className="size-4 shrink-0" />
+            <span>
+              {metObjectives === 1
+                ? 'Has cumplido 1 objetivo de inversión'
+                : `Has cumplido ${metObjectives} objetivos de inversión`}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {metObjectivePositions.map((p) => (
+              <Link
+                key={p.holdingId}
+                to={`/holdings/${p.holdingId}`}
+                title="Ver posición"
+                className="border-positive/30 bg-positive/10 text-positive hover:bg-positive/20 inline-flex cursor-pointer items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
+              >
+                <TargetIcon className="size-3" />
+                {p.symbol}
+                {p.entity && <span className="opacity-70">· {p.entity}</span>}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <section className="bg-card space-y-6 rounded-xl border p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -236,17 +290,6 @@ export function PortfolioSummary({
             </Button>
           </div>
         </div>
-
-        {metObjectives > 0 && (
-          <div className="border-positive/30 bg-positive/5 text-positive flex items-center gap-2 rounded-md border p-3 text-sm">
-            <TargetIcon className="size-4 shrink-0" />
-            <span>
-              {metObjectives === 1
-                ? 'Tienes 1 objetivo cumplido.'
-                : `Tienes ${metObjectives} objetivos cumplidos.`}
-            </span>
-          </div>
-        )}
 
         {missing.length > 0 && (
           <div className="text-muted-foreground flex items-start gap-2 rounded-md border border-dashed p-3 text-xs">
