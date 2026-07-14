@@ -20,7 +20,7 @@ import { Input } from '@/components/ui/input'
 import { DateInput } from '@/components/ui/date-input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { formatMoney, getCurrency } from '@/lib/currencies'
+import { formatMoney, getCurrency, roundMoney } from '@/lib/currencies'
 import { useEntities } from '@/features/entities/hooks'
 import { useAssets } from '@/features/assets/hooks'
 import { unitLabel } from '@/features/assets/labels'
@@ -121,14 +121,14 @@ export function InvestmentFormDialog({
   const symbol = getCurrency(currency)?.symbol ?? currency
   const qtyNum = Number(quantity)
   const priceNum = Number(price)
-  const feesNum = Number(fees) || 0
-  const taxesNum = Number(taxes) || 0
+  const feesNum = roundMoney(Number(fees) || 0, currency)
+  const taxesNum = roundMoney(Number(taxes) || 0, currency)
   const gross =
     Number.isFinite(qtyNum) && Number.isFinite(priceNum) && qtyNum > 0
-      ? qtyNum * priceNum
+      ? roundMoney(qtyNum * priceNum, currency)
       : 0
-  const totalCost = gross + feesNum + taxesNum
-  const netProceeds = gross - feesNum - taxesNum
+  const totalCost = roundMoney(gross + feesNum + taxesNum, currency)
+  const netProceeds = roundMoney(gross - feesNum - taxesNum, currency)
 
   const availableCash = entity?.cash_balance_cache ?? 0
   const heldQty =
@@ -212,7 +212,7 @@ export function InvestmentFormDialog({
     if (feesNum < 0 || taxesNum < 0)
       return setErrorMsg('Comisiones e impuestos no pueden ser negativos.')
 
-    if (!isEdit && type === 'BUY' && totalCost > availableCash)
+    if (!isEdit && type === 'BUY' && totalCost > availableCash + 1e-6)
       return setErrorMsg(
         `Fondos insuficientes: coste ${formatMoney(totalCost, currency)}, ` +
           `disponible ${formatMoney(availableCash, currency)}.`,

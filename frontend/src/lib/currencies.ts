@@ -36,6 +36,31 @@ export function getCurrency(code: string): Currency | undefined {
   return CURRENCY_MAP.get(code)
 }
 
+/** Número de decimales de la unidad mínima de la moneda (EUR→2, JPY→0). */
+export function moneyDecimals(code: string): number {
+  try {
+    return (
+      new Intl.NumberFormat('es-ES', {
+        style: 'currency',
+        currency: code,
+      }).resolvedOptions().maximumFractionDigits ?? 2
+    )
+  } catch {
+    return 2
+  }
+}
+
+/**
+ * Redondea un importe a la unidad mínima de su moneda (céntimos).
+ * Las cantidades de acciones y los tipos de cambio conservan toda su
+ * precisión; solo el dinero que impacta un saldo de caja se redondea, igual
+ * que hace un bróker real al cobrar/abonar.
+ */
+export function roundMoney(amount: number, code: string): number {
+  const factor = 10 ** moneyDecimals(code)
+  return Math.round((amount + Number.EPSILON) * factor) / factor
+}
+
 export function formatCurrencyLabel(code: string): string {
   const c = CURRENCY_MAP.get(code)
   return c ? `${c.code} · ${c.name}` : code
