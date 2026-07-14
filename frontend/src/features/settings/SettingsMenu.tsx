@@ -7,7 +7,7 @@ import {
   PlusIcon,
   RefreshCwIcon,
   ScaleIcon,
-  SettingsIcon,
+  ZapIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -76,16 +76,16 @@ export function SettingsMenu() {
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Ajustes"
+        aria-label="Acciones"
         onClick={() => setMenuOpen(true)}
       >
-        <SettingsIcon className="size-4" />
+        <ZapIcon className="size-4" />
       </Button>
 
       <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Ajustes</DialogTitle>
+            <DialogTitle>Acciones</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
             {options.map((opt) => (
