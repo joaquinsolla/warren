@@ -1,7 +1,6 @@
 import * as React from 'react'
 import { useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { PlusIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { BrandIcon } from '@/components/BrandIcon'
 import { brandStyle } from '@/lib/brand'
@@ -13,7 +12,6 @@ import {
   useUpdateAssetPrice,
 } from '@/features/assets/hooks'
 import { AssetFormDialog } from '@/features/assets/AssetFormDialog'
-import { InvestmentFormDialog } from '@/features/investments/InvestmentFormDialog'
 import {
   ASSET_TYPE_LABELS,
   ASSET_TYPE_LABELS_SINGULAR,
@@ -62,7 +60,7 @@ export function AssetDetailPage() {
   )
 
   const [editOpen, setEditOpen] = React.useState(false)
-  const [investOpen, setInvestOpen] = React.useState(false)
+
   const updatePrice = useUpdateAssetPrice()
   const [priceDraft, setPriceDraft] = React.useState('')
   const [priceMsg, setPriceMsg] = React.useState<string | null>(null)
@@ -150,16 +148,6 @@ export function AssetDetailPage() {
               <p className="text-muted-foreground text-sm">
                 {ASSET_TYPE_LABELS_SINGULAR[asset.asset_type]} · {asset.name}
               </p>
-            </div>
-            <div className="flex shrink-0 gap-2">
-              <Button
-                size="sm"
-                onClick={() => setInvestOpen(true)}
-                disabled={Boolean(asset.deleted_at)}
-              >
-                <PlusIcon className="size-4" />
-                Operar
-              </Button>
             </div>
           </div>
 
@@ -301,16 +289,6 @@ export function AssetDetailPage() {
         }}
         asset={asset}
       />
-
-      {portfolioId && (
-        <InvestmentFormDialog
-          open={investOpen}
-          onOpenChange={setInvestOpen}
-          portfolioId={portfolioId}
-          transaction={null}
-          defaultAssetId={asset.id}
-        />
-      )}
     </>
   )
 }

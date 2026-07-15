@@ -84,17 +84,27 @@ export function HoldingDetailPage() {
       <div className="space-y-8">
         <section className="bg-card space-y-6 rounded-xl border p-6">
           <div className="flex items-start gap-4">
-            <span style={brandStyle(asset?.color ?? null)}>
-              <BrandIcon
-                name={asset?.symbol ?? '?'}
-                domain={asset?.icon_domain ?? null}
-                className={
-                  asset?.color
-                    ? 'bg-brand text-brand-foreground size-12'
-                    : 'size-12'
-                }
-              />
-            </span>
+            {asset ? (
+              <Link
+                to={`/assets/${asset.id}`}
+                style={brandStyle(asset.color ?? null)}
+                className="transition-opacity hover:opacity-80"
+              >
+                <BrandIcon
+                  name={asset.symbol ?? '?'}
+                  domain={asset.icon_domain ?? null}
+                  className={
+                    asset.color
+                      ? 'bg-brand text-brand-foreground size-12'
+                      : 'size-12'
+                  }
+                />
+              </Link>
+            ) : (
+              <span style={brandStyle(null)}>
+                <BrandIcon name="?" domain={null} className="size-12" />
+              </span>
+            )}
             <div className="min-w-0 flex-1">
               <h1 className="text-2xl font-semibold tracking-tight">
                 {asset ? (
