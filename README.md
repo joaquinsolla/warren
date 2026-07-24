@@ -1,4 +1,4 @@
-# Modelo de Datos - Warren
+# Modelo de Datos - Warren - [DEPRECATED]
 
 ## Filosofía del modelo
 
